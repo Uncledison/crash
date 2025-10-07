@@ -1,9 +1,17 @@
 // =======================================================
-// 1. 캔버스 및 초기 설정
+// 1. 캔버스 및 초기 설정 (가장 중요한 부분)
 // =======================================================
 const canvas = document.getElementById('myGameCanvas');
-const ctx = canvas.getContext('2d');
 
+// 🚨🚨🚨 Canvas 객체 로드 실패 시 코드 중단 방지 (안전 장치)
+if (!canvas) {
+    console.error("오류: HTML에서 'myGameCanvas' ID를 가진 Canvas 요소를 찾을 수 없습니다. HTML 파일 점검 필요!");
+    alert("오류: 게임 실행을 위한 캔버스(Canvas) 요소를 찾을 수 없습니다. HTML 파일의 ID를 확인해 주세요.");
+    // 캔버스가 없으면 더 이상 진행하지 않습니다.
+    throw new Error("Canvas element not found."); 
+}
+
+const ctx = canvas.getContext('2d');
 const WIDTH = canvas.width;  // 480
 const HEIGHT = canvas.height; // 768
 
@@ -37,7 +45,7 @@ let descentTimer = null;
 
 
 // =======================================================
-// 2. 사운드 및 벽돌 설정
+// 2. 사운드 및 벽돌 설정 (생략된 함수 내용 포함)
 // =======================================================
 const sounds = {
     ping: new Audio('assets/sounds/ping.mp3'), crash: new Audio('assets/sounds/crash.wav'), gameOver: new Audio('assets/sounds/game_over.wav'),
@@ -135,46 +143,160 @@ function changeGameLevel(newLevel) {
 
 
 // =======================================================
-// 4. 이벤트 핸들러 및 그리기 함수
+// 4. 이벤트 핸들러 및 그리기 함수 (디자인 복원 포함)
 // =======================================================
 document.addEventListener("touchmove", touchMoveHandler, false);
 document.addEventListener("touchstart", touchMoveHandler, false);
 
-function touchMoveHandler(e) { /* ... */ }
-function drawBall(ball) { /* ... */ }
-function drawPaddle() { /* ... */ }
-function drawBricks() { /* ... */ }
-function drawScore() { /* ... */ }
-function drawLives() { /* ... */ }
-function drawPowerups() { /* ... */ }
+function touchMoveHandler(e) {
+    const rect = canvas.getBoundingClientRect();
+    const relativeX = (e.touches[0].clientX - rect.left) * (WIDTH / rect.width);
+    
+    if (relativeX > 0 && relativeX < WIDTH) {
+        paddleX = relativeX - PADDLE_WIDTH / 2; 
+        
+        if (paddleX < 0) { paddleX = 0; }
+        if (paddleX + PADDLE_WIDTH > WIDTH) { paddleX = WIDTH - PADDLE_WIDTH; }
+    }
+    
+    if (!isBgmPlaying) {
+        (level === 2 ? sounds.bgm02 : sounds.bgm01).play().catch(e => {
+            console.log("BGM 자동 재생 차단됨. 첫 터치 후 재생 시작:", e);
+        });
+        isBgmPlaying = true;
+    }
+    
+    e.preventDefault(); 
+}
+
+function drawBall(ball) {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color;
+    ctx.shadowBlur = 15; 
+    ctx.shadowColor = ball.color;
+    ctx.fill();
+    ctx.closePath();
+    
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#FFFFFF"; 
+    ctx.shadowBlur = 0; 
+    ctx.fill();
+    ctx.closePath();
+    
+    ctx.shadowBlur = 0; 
+}
+
+function drawPaddle() {
+    const gradient = ctx.createLinearGradient(paddleX, HEIGHT - PADDLE_HEIGHT, paddleX + PADDLE_WIDTH, HEIGHT);
+    gradient.addColorStop(0, "#C0C0C0"); 
+    gradient.addColorStop(0.5, "#4B4B4B"); 
+    gradient.addColorStop(1, "#C0C0C0");
+
+    ctx.beginPath();
+    ctx.rect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.closePath();
+}
+
+function drawBricks() {
+    for(let c=0; c<brickColumnCount; c++) {
+        for(let r=0; r<brickRowCount; r++) {
+            if(bricks[c][r].status === 1) { 
+                const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                
+                bricks[c][r].x = brickX;
+                bricks[c][r].y = brickY;
+                
+                ctx.beginPath();
+                ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                const hue = 360 / brickRowCount * r;
+                
+                const gradBrick = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
+                gradBrick.addColorStop(0, `hsl(${hue}, 80%, 75%)`); 
+                gradBrick.addColorStop(0.5, `hsl(${hue}, 80%, 50%)`); 
+                gradBrick.addColorStop(1, `hsl(${hue}, 80%, 35%)`); 
+
+                ctx.fillStyle = gradBrick;
+                ctx.fill();
+                ctx.strokeStyle = "#000000"; 
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+    }
+}
+
+function drawScore() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#00FFFF"; 
+    ctx.fillText("Score: " + score, 8, 20);
+}
+
+function drawLives() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#00FFFF"; 
+    ctx.fillText("Lives: " + lives, WIDTH - 65, 20);
+}
+
+function drawPowerups() {
+    for (let i = powerups.length - 1; i >= 0; i--) {
+        let p = powerups[i];
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = p.color;
+
+        if (p.type === 'LONG_PADDLE') {
+            const w = p.radius * 3;
+            const h = p.radius * 0.8;
+            ctx.beginPath();
+            ctx.rect(p.x - w / 2, p.y - h / 2, w, h);
+            ctx.fillStyle = p.color;
+            ctx.fill();
+            ctx.closePath();
+        } else { // MULTIBALL
+            const r = p.radius * 0.5;
+            ctx.fillStyle = p.color;
+            ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
+            ctx.beginPath(); ctx.arc(p.x - r, p.y - r, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
+            ctx.beginPath(); ctx.arc(p.x + r, p.y - r, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
+        }
+        
+        ctx.shadowBlur = 0; 
+        p.y += p.dy;
+        
+        if (p.y - p.radius > HEIGHT) {
+            powerups.splice(i, 1);
+        }
+    }
+}
 
 
 // =======================================================
-// 5. 파워업 로직
+// 5. 파워업 및 충돌 처리 로직
 // =======================================================
 function activateLongPaddle() { /* ... */ }
 function activateMultiball() { /* ... */ }
 function powerupCollisionDetection() { /* ... */ }
-
-
-// =======================================================
-// 6. 충돌 처리 및 로직
-// =======================================================
-
 function checkWinCondition() { /* ... */ }
 function brickCollisionDetection(ball) { /* ... */ }
 
-// ✨ 볼 충돌 로직 최종 수정
 function ballWallAndPaddleCollision(ball, ballIndex) {
-    // 1. 좌/우 벽 충돌 (튕김 로직)
+    // 1. 좌/우 벽 충돌 (튕김)
     if (ball.x + ball.dx > WIDTH - ball.radius || ball.x + ball.dx < ball.radius) {
         ball.dx = -ball.dx;
         playSound('ping');
     }
     
-    // 2. 상단 벽 충돌 (사라짐 로직 - 사용자 요청 반영)
+    // 2. 상단 벽 충돌 (사라짐 - 사용자 요청)
     if (ball.y + ball.dy < ball.radius) {
-        // 공이 상단 벽을 넘어섰으므로, 공을 제거하고 생명 감소 처리로 이동
         balls.splice(ballIndex, 1);
         handleBallLoss();
         return; 
@@ -199,7 +321,6 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
     }
 }
 
-// 공 손실 처리 로직 통합 함수 (중복 코드를 줄이고 안정성 향상)
 function handleBallLoss() {
     if (balls.length === 0) {
         lives--;
@@ -209,7 +330,6 @@ function handleBallLoss() {
             alert("GAME OVER! 최종 점수: " + score);
             document.location.reload(); 
         } else {
-            // 공 재생성
             const config = LEVEL_CONFIGS[level];
             const speed = BALL_SPEED_BASE * config.speed_ratio;
             balls.push({x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"});
@@ -227,6 +347,7 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
+    // 이 부분에서 블록, 패들, 볼이 그려집니다.
     drawBricks();
     drawPaddle();
     drawScore();
@@ -251,9 +372,12 @@ function draw() {
 
 // 게임 시작 통합 함수 (초기화 안정화)
 function initializeAndStartGame() {
-    resetGame(1); 
-    descentTimer = setTimeout(descentBricks, descentInterval);
-    draw();
+    // 캔버스 객체가 정상적으로 할당된 경우에만 게임 시작
+    if (canvas) {
+        resetGame(1); 
+        descentTimer = setTimeout(descentBricks, descentInterval);
+        draw();
+    }
 }
 
 initializeAndStartGame();
