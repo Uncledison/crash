@@ -1,6 +1,6 @@
 // =======================================================
-// 벽돌깨기 게임 - PHASE 2 UPGRADE
-// Part 1: 캔버스, 초기 설정, 메뉴 시스템
+// 벽돌깨기 게임 - 통합 버전
+// Part 1: 캔버스, 초기 설정, 사운드, 벽돌 시스템
 // =======================================================
 
 // 1. 캔버스 및 초기 설정
@@ -55,7 +55,7 @@ const MAGNETIC_DURATION = 15000;
 const MAGNETIC_FORCE = 0.3;
 const MAGNETIC_RANGE = 100;
 
-// ✨ Phase 2: 레벨업 애니메이션 상태
+// 레벨업 애니메이션 상태
 let isLevelingUp = false;
 let levelUpAnimation = {
     progress: 0,
@@ -65,9 +65,9 @@ let levelUpAnimation = {
     textRotation: 0
 };
 
-// ✨ Phase 2: 메뉴 시스템
+// 메뉴 시스템
 let isMenuOpen = false;
-let menuAnimation = 0; // 0~1 (슬라이드 진행도)
+let menuAnimation = 0;
 
 // 파워업 타이머 관리
 let activePowerups = {
@@ -98,7 +98,7 @@ const sounds = {
     crash: createSafeAudio('assets/sounds/crash.wav'),
     gameOver: createSafeAudio('assets/sounds/game_over.wav'),
     powerup: createSafeAudio('assets/sounds/powerup.mp3'),
-    levelup: createSafeAudio('assets/sounds/powerup.mp3'), // 레벨업용
+    levelup: createSafeAudio('assets/sounds/powerup.mp3'),
     bgm01: createSafeAudio('assets/sounds/bgm01.mp3'),
     bgm02: createSafeAudio('assets/sounds/bgm02.mp3') 
 };
@@ -293,7 +293,6 @@ function resetGame(newLevel) {
     }
 }
 
-// ✨ Phase 2: 레벨 변경 (확인 팝업 포함)
 function changeGameLevel(newLevel) {
     if (newLevel < 1 || newLevel > 3) return;
     const config = LEVEL_CONFIGS[newLevel];
@@ -342,7 +341,6 @@ function touchMoveHandler(e) {
     }
 }
 
-// ✨ Phase 2: 메뉴 토글
 function toggleMenu() {
     isMenuOpen = !isMenuOpen;
     if (isMenuOpen) {
@@ -350,12 +348,10 @@ function toggleMenu() {
     }
 }
 
-// ✨ Phase 2: 일시정지 토글
 function togglePause() {
     isPaused = !isPaused;
 }
 
-// ✨ Phase 2: BGM 토글
 function toggleBGM() {
     isBgmPlaying = !isBgmPlaying;
     if (isBgmPlaying) {
@@ -367,53 +363,42 @@ function toggleBGM() {
     }
 }
 
-// ✨ Phase 2: 효과음 토글
 function toggleSFX() {
     isSfxEnabled = !isSfxEnabled;
 }
 
-// ✨ Phase 2: 캔버스 클릭 이벤트
 canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    // 햄버거 메뉴 클릭 (좌상단 50x50)
     if (x < 50 && y < 50) {
         toggleMenu();
         return;
     }
     
-    // 메뉴가 열려있을 때 메뉴 영역 클릭 처리
     if (isMenuOpen) {
         handleMenuClick(x, y);
     }
 });
 
-// ✨ Phase 2: 메뉴 클릭 처리
 function handleMenuClick(x, y) {
     const menuWidth = 200;
     if (x > menuWidth) {
-        // 메뉴 외부 클릭 시 닫기
         isMenuOpen = false;
         isPaused = false;
         return;
     }
     
-    // 난이도 버튼 (y: 80-130, 140-190, 200-250)
     if (y >= 80 && y <= 130) changeGameLevel(1);
     else if (y >= 140 && y <= 190) changeGameLevel(2);
     else if (y >= 200 && y <= 250) changeGameLevel(3);
-    // BGM 토글 (y: 280-310)
     else if (y >= 280 && y <= 310) toggleBGM();
-    // SFX 토글 (y: 320-350)
     else if (y >= 320 && y <= 350) toggleSFX();
-    // 일시정지 (y: 380-420)
     else if (y >= 380 && y <= 420) {
         isMenuOpen = false;
         togglePause();
     }
-    // 재시작 (y: 430-470)
     else if (y >= 430 && y <= 470) {
         if (confirm('게임을 다시 시작하시겠습니까?')) {
             resetGame(level);
@@ -421,7 +406,6 @@ function handleMenuClick(x, y) {
             isMenuOpen = false;
         }
     }
-    // 닫기 (y: 480-520)
     else if (y >= 480 && y <= 520) {
         isMenuOpen = false;
         isPaused = false;
@@ -431,9 +415,10 @@ function handleMenuClick(x, y) {
 document.addEventListener('mousemove', mouseMoveHandler, false); 
 document.addEventListener('touchmove', touchMoveHandler, false);
 
-console.log("✅ Phase 2 - Part 1 로드 완료");
+console.log("✅ Part 1 로드 완료");
+## 📄 game.js - Part 2 (그리기 함수)
+
 // =======================================================
-// 벽돌깨기 게임 - PHASE 2 UPGRADE
 // Part 2: 그리기 함수 (레벨업 애니메이션 & 메뉴)
 // =======================================================
 
@@ -471,7 +456,7 @@ function drawHeart(x, y, size, filled = true) {
     ctx.restore();
 }
 
-// ✨ Phase 2: 햄버거 메뉴 아이콘
+// 햄버거 메뉴 아이콘
 function drawHamburgerIcon() {
     const x = 25;
     const y = 25;
@@ -479,10 +464,13 @@ function drawHamburgerIcon() {
     const lineHeight = 3;
     const spacing = 6;
     
-    ctx.fillStyle = '#FFF';
+    ctx.fillStyle = '#00FFFF';
+    ctx.shadowColor = '#00FFFF';
+    ctx.shadowBlur = 10;
     ctx.fillRect(x - lineWidth/2, y - spacing - lineHeight/2, lineWidth, lineHeight);
     ctx.fillRect(x - lineWidth/2, y - lineHeight/2, lineWidth, lineHeight);
     ctx.fillRect(x - lineWidth/2, y + spacing - lineHeight/2, lineWidth, lineHeight);
+    ctx.shadowBlur = 0;
 }
 
 // 상단 UI 바
@@ -490,39 +478,40 @@ function drawTopUI() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fillRect(0, 0, WIDTH, 50);
     
-    // 햄버거 메뉴
     drawHamburgerIcon();
     
-    // 중앙: 점수
     ctx.font = 'bold 20px Arial';
     ctx.fillStyle = '#FFD700';
     ctx.textAlign = 'center';
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 10;
     ctx.fillText(`${score}`, WIDTH / 2, 32);
+    ctx.shadowBlur = 0;
     
     ctx.font = '16px Arial';
     ctx.fillStyle = '#FFF';
     ctx.fillText('🏆', WIDTH / 2 - 40, 30);
     
-    // 오른쪽: 하트
     let heartX = WIDTH - 85;
     for (let i = 0; i < 3; i++) {
         drawHeart(heartX, 25, 8, i < lives);
         heartX += 25;
     }
     
-    // 레벨 표시
     const config = LEVEL_CONFIGS[level];
     ctx.font = 'bold 16px Arial';
-    ctx.fillStyle = '#FFF';
+    ctx.fillStyle = '#00FFFF';
     ctx.textAlign = 'left';
+    ctx.shadowColor = '#00FFFF';
+    ctx.shadowBlur = 10;
     ctx.fillText(`${config.icon} ${level}`, 60, 30);
+    ctx.shadowBlur = 0;
 }
 
-// ✨ Phase 2: 슬라이드 메뉴 그리기
+// 슬라이드 메뉴 그리기
 function drawMenu() {
     if (!isMenuOpen && menuAnimation <= 0) return;
     
-    // 메뉴 애니메이션
     if (isMenuOpen && menuAnimation < 1) {
         menuAnimation = Math.min(1, menuAnimation + 0.1);
     } else if (!isMenuOpen && menuAnimation > 0) {
@@ -532,31 +521,33 @@ function drawMenu() {
     const menuWidth = 200;
     const slideX = -menuWidth + (menuWidth * menuAnimation);
     
-    // 반투명 오버레이
     if (menuAnimation > 0) {
         ctx.fillStyle = `rgba(0, 0, 0, ${0.5 * menuAnimation})`;
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
     
-    // 메뉴 배경
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(slideX, 0, menuWidth, HEIGHT);
     
-    // 메뉴 제목
-    ctx.fillStyle = '#FFF';
+    ctx.strokeStyle = '#00FFFF';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(slideX, 0, menuWidth, HEIGHT);
+    
+    ctx.fillStyle = '#00FFFF';
     ctx.font = 'bold 20px Arial';
     ctx.textAlign = 'left';
+    ctx.shadowColor = '#00FFFF';
+    ctx.shadowBlur = 15;
     ctx.fillText('🎮 MENU', slideX + 20, 40);
+    ctx.shadowBlur = 0;
     
-    // 구분선
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(slideX + 10, 60);
     ctx.lineTo(slideX + menuWidth - 10, 60);
     ctx.stroke();
     
-    // 난이도 선택
     ctx.font = '14px Arial';
     ctx.fillStyle = '#AAA';
     ctx.fillText('난이도 선택:', slideX + 20, 80);
@@ -571,31 +562,36 @@ function drawMenu() {
         const isSelected = level === item.level;
         ctx.fillStyle = isSelected ? '#00FFFF' : '#FFF';
         ctx.font = isSelected ? 'bold 16px Arial' : '16px Arial';
+        if (isSelected) {
+            ctx.shadowColor = '#00FFFF';
+            ctx.shadowBlur = 10;
+        }
         ctx.fillText(`${item.icon} ${item.name} ${isSelected ? '✓' : ''}`, slideX + 30, item.y);
+        ctx.shadowBlur = 0;
     });
     
-    // 구분선
     ctx.beginPath();
     ctx.moveTo(slideX + 10, 240);
     ctx.lineTo(slideX + menuWidth - 10, 240);
     ctx.stroke();
     
-    // 사운드 설정
     ctx.font = '14px Arial';
     ctx.fillStyle = '#FFF';
     ctx.fillText(`🎵 BGM`, slideX + 30, 290);
+    ctx.fillStyle = isBgmPlaying ? '#00FF00' : '#FF0000';
     ctx.fillText(isBgmPlaying ? '[ON]' : '[OFF]', slideX + 130, 290);
     
+    ctx.fillStyle = '#FFF';
     ctx.fillText(`🔊 SFX`, slideX + 30, 330);
+    ctx.fillStyle = isSfxEnabled ? '#00FF00' : '#FF0000';
     ctx.fillText(isSfxEnabled ? '[ON]' : '[OFF]', slideX + 130, 330);
     
-    // 구분선
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
     ctx.beginPath();
     ctx.moveTo(slideX + 10, 360);
     ctx.lineTo(slideX + menuWidth - 10, 360);
     ctx.stroke();
     
-    // 버튼들
     ctx.font = '16px Arial';
     ctx.fillStyle = '#FFF';
     ctx.fillText(`${isPaused ? '▶️' : '⏸️'} ${isPaused ? '계속하기' : '일시정지'}`, slideX + 30, 400);
@@ -603,20 +599,21 @@ function drawMenu() {
     ctx.fillText('❌ 닫기', slideX + 30, 500);
 }
 
-// ✨ Phase 2: 레벨업 애니메이션
+// 레벨업 애니메이션
 function drawLevelUpAnimation() {
     if (!isLevelingUp) return;
     
     const anim = levelUpAnimation;
     const progress = anim.progress / anim.maxDuration;
     
-    // 폭죽 파티클
     for (let p of anim.particles) {
         ctx.save();
         ctx.globalAlpha = p.life;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
         ctx.fill();
         ctx.restore();
         
@@ -626,7 +623,6 @@ function drawLevelUpAnimation() {
         p.life -= 0.015;
     }
     
-    // "LEVEL UP!" 텍스트 (0.3초~1.0초에 표시)
     if (progress > 0.15 && progress < 0.5) {
         ctx.save();
         ctx.translate(WIDTH / 2, HEIGHT / 2 - 50);
@@ -638,7 +634,6 @@ function drawLevelUpAnimation() {
         ctx.rotate(rotation);
         ctx.scale(scale, scale);
         
-        // 무지개 그라데이션
         const gradient = ctx.createLinearGradient(-100, 0, 100, 0);
         gradient.addColorStop(0, '#FF0000');
         gradient.addColorStop(0.2, '#FF7F00');
@@ -651,9 +646,10 @@ function drawLevelUpAnimation() {
         ctx.fillStyle = gradient;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#FFF';
+        ctx.shadowBlur = 20;
         ctx.fillText('LEVEL UP!', 0, 0);
         
-        // 외곽선
         ctx.strokeStyle = '#FFF';
         ctx.lineWidth = 3;
         ctx.strokeText('LEVEL UP!', 0, 0);
@@ -661,7 +657,6 @@ function drawLevelUpAnimation() {
         ctx.restore();
     }
     
-    // 새 레벨 숫자 (1.0초~1.5초)
     if (progress > 0.5 && progress < 0.75) {
         const numProgress = (progress - 0.5) / 0.25;
         const y = HEIGHT / 2 - 100 + (100 * (1 - numProgress));
@@ -673,6 +668,8 @@ function drawLevelUpAnimation() {
         ctx.fillStyle = '#FFD700';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 30;
         ctx.fillText(level.toString(), WIDTH / 2, y + bounce * 20);
         
         ctx.strokeStyle = '#FFF';
@@ -681,7 +678,6 @@ function drawLevelUpAnimation() {
         ctx.restore();
     }
     
-    // 페이드아웃 (1.5초~2.0초)
     if (progress > 0.75) {
         const fadeProgress = (progress - 0.75) / 0.25;
         ctx.fillStyle = `rgba(0, 0, 0, ${fadeProgress})`;
@@ -715,8 +711,12 @@ function drawPowerupTimers() {
                 long: '#32CD32'
             };
             
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.fillRect(xPos - 5, yOffset - 5, barWidth + 30, barHeight + 10);
+            
+            ctx.strokeStyle = colors[key];
+            ctx.lineWidth = 1;
+            ctx.strokeRect(xPos - 5, yOffset - 5, barWidth + 30, barHeight + 10);
             
             ctx.font = '12px Arial';
             ctx.fillText(icons[key], xPos - 18, yOffset + 6);
@@ -725,7 +725,10 @@ function drawPowerupTimers() {
             ctx.fillRect(xPos, yOffset, barWidth, barHeight);
             
             ctx.fillStyle = colors[key];
+            ctx.shadowColor = colors[key];
+            ctx.shadowBlur = 10;
             ctx.fillRect(xPos, yOffset, barWidth * percentage, barHeight);
+            ctx.shadowBlur = 0;
             
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.lineWidth = 1;
@@ -752,7 +755,10 @@ function drawTutorial() {
         
         ctx.strokeStyle = '#00FFFF';
         ctx.lineWidth = 2;
+        ctx.shadowColor = '#00FFFF';
+        ctx.shadowBlur = 15;
         ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        ctx.shadowBlur = 0;
         
         ctx.fillStyle = '#FFFFFF';
         ctx.font = 'bold 16px Arial';
@@ -824,7 +830,10 @@ function drawBall(ball) {
         ctx.fillStyle = ball.color || "#FFDD00";
     }
     
+    ctx.shadowColor = ball.color;
+    ctx.shadowBlur = 10;
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.closePath();
     
     ctx.beginPath();
@@ -869,7 +878,10 @@ function drawPaddle() {
     }
     
     ctx.fillStyle = gradient;
+    ctx.shadowColor = isMagneticActive ? '#00FFFF' : isLongPaddleActive ? '#FF6B35' : '#0095DD';
+    ctx.shadowBlur = 15;
     ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.shadowBlur = 0;
     
     ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, 3);
@@ -907,9 +919,12 @@ function drawBricks() {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
                 ctx.fillRect(brickX, brickY + brickHeight - 3, brickWidth, 3);
                 
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.strokeStyle = `hsl(${hue}, 80%, 70%)`;
+                ctx.shadowColor = `hsl(${hue}, 80%, 50%)`;
+                ctx.shadowBlur = 5;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(brickX, brickY, brickWidth, brickHeight);
+                ctx.shadowBlur = 0;
             }
         }
     }
@@ -928,7 +943,10 @@ function drawPowerups() {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 15;
         ctx.fill();
+        ctx.shadowBlur = 0;
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -964,7 +982,7 @@ function drawParticles() {
     }
 }
 
-// ✨ Phase 2: 일시정지 오버레이
+// 일시정지 오버레이
 function drawPauseOverlay() {
     if (!isPaused || isMenuOpen) return;
     
@@ -972,17 +990,22 @@ function drawPauseOverlay() {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     
     ctx.font = 'bold 48px Arial';
-    ctx.fillStyle = '#FFF';
+    ctx.fillStyle = '#00FFFF';
     ctx.textAlign = 'center';
+    ctx.shadowColor = '#00FFFF';
+    ctx.shadowBlur = 30;
     ctx.fillText('⏸️ PAUSED', WIDTH / 2, HEIGHT / 2);
+    ctx.shadowBlur = 0;
     
     ctx.font = '20px Arial';
+    ctx.fillStyle = '#FFF';
     ctx.fillText('메뉴를 열어 계속하기', WIDTH / 2, HEIGHT / 2 + 50);
 }
 
-console.log("✅ Phase 2 - Part 2 로드 완료");
+console.log("✅ Part 2 로드 완료");
+## 📄 game.js - Part 3 (게임 로직 & 메인 루프)
+
 // =======================================================
-// 벽돌깨기 게임 - PHASE 2 UPGRADE
 // Part 3: 게임 로직, 충돌 처리, 메인 루프
 // =======================================================
 
@@ -1113,14 +1136,13 @@ function updatePowerupTimers(deltaTime) {
     }
 }
 
-// ✨ Phase 2: 레벨업 애니메이션 시작
+// 레벨업 애니메이션 시작
 function startLevelUpAnimation() {
     isLevelingUp = true;
     isPaused = true;
     
     playSound('levelup');
     
-    // 폭죽 파티클 생성
     levelUpAnimation.particles = [];
     const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FFD700', '#FFF'];
     
@@ -1135,7 +1157,6 @@ function startLevelUpAnimation() {
     
     levelUpAnimation.progress = 0;
     
-    // 2초 후 다음 레벨 시작
     setTimeout(() => {
         isLevelingUp = false;
         isPaused = false;
@@ -1145,13 +1166,12 @@ function startLevelUpAnimation() {
     }, levelUpAnimation.maxDuration);
 }
 
-// ✨ Phase 2: 레벨업 애니메이션 업데이트
+// 레벨업 애니메이션 업데이트
 function updateLevelUpAnimation(deltaTime) {
     if (!isLevelingUp) return;
     
     levelUpAnimation.progress += deltaTime;
     
-    // 파티클 업데이트
     for (let i = levelUpAnimation.particles.length - 1; i >= 0; i--) {
         const p = levelUpAnimation.particles[i];
         p.x += p.vx;
@@ -1206,7 +1226,6 @@ function checkWinCondition() {
             descentTimer = null;
         }
         
-        // ✨ Phase 2: 레벨업 애니메이션 시작
         startLevelUpAnimation();
     }
 }
@@ -1390,13 +1409,11 @@ function draw() {
     
     drawTutorial();
     
-    // ✨ Phase 2: 레벨업 애니메이션
     if (isLevelingUp) {
         updateLevelUpAnimation(deltaTime);
         drawLevelUpAnimation();
     }
     
-    // 공 처리 (일시정지 또는 레벨업 중이 아닐 때만)
     if (!isPaused && !isLevelingUp) {
         for (let i = balls.length - 1; i >= 0; i--) {
             let ball = balls[i];
@@ -1412,13 +1429,11 @@ function draw() {
         
         powerupCollisionDetection();
     } else {
-        // 일시정지 중에도 공은 그려줌
         for (let ball of balls) {
             drawBall(ball);
         }
     }
     
-    // ✨ Phase 2: 메뉴 & 오버레이
     drawPauseOverlay();
     drawMenu();
 
@@ -1429,20 +1444,26 @@ function draw() {
 
 function initializeAndStartGame() {
     if (canvas) {
+        console.log("🎮 게임 초기화 중...");
         resetGame(1); 
         descentTimer = setTimeout(descentBricks, descentInterval);
+        console.log("✅ 게임 시작!");
         draw();
+    } else {
+        console.error("❌ 캔버스를 찾을 수 없습니다!");
     }
 }
 
 initializeAndStartGame();
 
-console.log("✅ Phase 2 - Part 3 로드 완료");
-console.log("🎉 Phase 2 업그레이드 완료!");
-console.log("📋 새로운 기능:");
+console.log("✅ Part 3 로드 완료");
+console.log("🎉 게임 로드 완료!");
+console.log("━━━━━━━━━━━━━━━━━━━━━━");
+console.log("📋 Phase 2 기능:");
 console.log("  • 레벨업 폭죽 애니메이션");
+console.log("  • 사이버펑크 네온 효과");
 console.log("  • 햄버거 슬라이드 메뉴");
-console.log("  • 하단 버튼 제거");
 console.log("  • 일시정지 기능");
 console.log("  • BGM/SFX 토글");
-console.log("  • 개선된 UI/UX");
+console.log("  • 파워업 타이머 게이지");
+console.log("━━━━━━━━━━━━━━━━━━━━━━");
