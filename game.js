@@ -1,6 +1,6 @@
 // =======================================================
-// 벽돌깨기 게임 - PART 1
-// 캔버스, 초기 설정, 사운드, 벽돌, 이벤트 핸들러
+// 벽돌깨기 게임 - PHASE 1 UPGRADE
+// Part 1: 캔버스, 초기 설정, 사운드, 벽돌 시스템
 // =======================================================
 
 // 1. 캔버스 및 초기 설정
@@ -21,14 +21,14 @@ const HEIGHT = canvas.height;
 
 // 기본 설정 상수
 const BALL_SPEED_BASE = 4;
-const PADDLE_HEIGHT = 10;
+const PADDLE_HEIGHT = 12;
 const PADDLE_WIDTH_BASE = 75; 
 
 const LEVEL_CONFIGS = [
     null,
-    { name: "Level 1 (Easy)", paddle_ratio: 2.0, speed_ratio: 1.0 },
-    { name: "Level 2 (Normal)", paddle_ratio: 1.0, speed_ratio: 1.5 },
-    { name: "Level 3 (Hard)", paddle_ratio: 0.8, speed_ratio: 2.0 }
+    { name: "Level 1 (Easy)", paddle_ratio: 2.0, speed_ratio: 1.0, bgColor: '#1a1a2e' },
+    { name: "Level 2 (Normal)", paddle_ratio: 1.0, speed_ratio: 1.5, bgColor: '#0f0f1e' },
+    { name: "Level 3 (Hard)", paddle_ratio: 0.8, speed_ratio: 2.0, bgColor: '#000000' }
 ];
 
 // 게임 상태 변수
@@ -52,6 +52,18 @@ let magneticTimer = null;
 const MAGNETIC_DURATION = 15000;
 const MAGNETIC_FORCE = 0.3;
 const MAGNETIC_RANGE = 100;
+
+// ✨ Phase 1: 파워업 타이머 관리
+let activePowerups = {
+    fire: { active: false, remaining: 0, max: 12000 },
+    mega: { active: false, remaining: 0, max: 10000 },
+    magnetic: { active: false, remaining: 0, max: 15000 },
+    long: { active: false, remaining: 0, max: 10000 }
+};
+
+// ✨ Phase 1: 튜토리얼 툴팁 상태
+let showTutorial = true;
+let tutorialOpacity = 1.0;
 
 // 2. 사운드 설정
 const createSafeAudio = (path) => {
@@ -90,7 +102,7 @@ const brickColumnCount = 8;
 const brickWidth = 50;
 const brickHeight = 15;
 const brickPadding = 10;
-let brickOffsetTop = 30;  
+let brickOffsetTop = 60;  // ✨ UI 공간 확보를 위해 증가
 const totalBrickAreaWidth = brickColumnCount * brickWidth + (brickColumnCount - 1) * brickPadding;
 const brickOffsetLeft = (WIDTH - totalBrickAreaWidth) / 2; 
 
@@ -122,18 +134,23 @@ function Powerup(x, y) {
     if (rand < 0.25) {
         this.color = "yellow";
         this.type = 'MULTIBALL';
+        this.icon = 'M';
     } else if (rand < 0.5) {
         this.color = "lime";
         this.type = 'LONG_PADDLE';
+        this.icon = 'L';
     } else if (rand < 0.7) {
         this.color = "orange";
         this.type = 'MEGA_BALL';
+        this.icon = 'G';
     } else if (rand < 0.85) {
         this.color = "red";
         this.type = 'FIRE_BALL';
+        this.icon = 'F';
     } else {
         this.color = "cyan";
         this.type = 'MAGNETIC';
+        this.icon = 'A';
     }
 }
 
@@ -163,7 +180,7 @@ function descentBricks() {
     for(let c = 0; c < brickColumnCount; c++) {
         for(let r = 0; r < brickRowCount; r++) {
             const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-            if (bricks[c][r].status === 1 && brickY + brickHeight >= HEIGHT - PADDLE_HEIGHT) {
+            if (bricks[c][r].status === 1 && brickY + brickHeight >= HEIGHT - PADDLE_HEIGHT - 50) {
                 clearTimeout(descentTimer);
                 sounds.bgm01.pause();
                 sounds.bgm02.pause();
@@ -188,10 +205,16 @@ function resetGame(newLevel) {
     balls = [];
     powerups = [];
     particles = [];
-    brickOffsetTop = 30; 
+    brickOffsetTop = 60; 
     
     isLongPaddleActive = false;
     isMagneticActive = false;
+    
+    // ✨ Phase 1: 파워업 상태 초기화
+    for (let key in activePowerups) {
+        activePowerups[key].active = false;
+        activePowerups[key].remaining = 0;
+    }
     
     if (longPaddleTimer) {
         clearTimeout(longPaddleTimer);
@@ -209,7 +232,7 @@ function resetGame(newLevel) {
     initBricksForPattern(newLevel); 
     balls.push({
         x: WIDTH / 2,
-        y: HEIGHT - 30,
+        y: HEIGHT - 80,
         dx: speed,
         dy: -speed,
         radius: 8,
@@ -249,6 +272,11 @@ function mouseMoveHandler(e) {
     if(relativeX > 0 && relativeX < WIDTH) {
         paddleX = Math.max(0, Math.min(WIDTH - PADDLE_WIDTH, relativeX - PADDLE_WIDTH / 2));
     }
+    
+    // ✨ Phase 1: 첫 움직임 시 튜토리얼 숨기기
+    if (showTutorial) {
+        showTutorial = false;
+    }
 }
 
 function touchMoveHandler(e) { 
@@ -257,6 +285,11 @@ function touchMoveHandler(e) {
         paddleX = Math.max(0, Math.min(WIDTH - PADDLE_WIDTH, touchX - PADDLE_WIDTH / 2));
     }
     e.preventDefault(); 
+    
+    // ✨ Phase 1: 첫 터치 시 튜토리얼 숨기기
+    if (showTutorial) {
+        showTutorial = false;
+    }
     
     if (!isBgmPlaying) {
         const bgmToPlay = (level === 2 ? sounds.bgm02 : sounds.bgm01);
@@ -271,20 +304,171 @@ function touchMoveHandler(e) {
 document.addEventListener('mousemove', mouseMoveHandler, false); 
 document.addEventListener('touchmove', touchMoveHandler, false);
 
-// Part 1 완료 - Part 2에서 계속됩니다
-console.log("Part 1 로드 완료");
-
+console.log("✅ Phase 1 - Part 1 로드 완료");
 // =======================================================
-// 벽돌깨기 게임 - PART 2
-// 그리기 함수, 충돌 처리, 메인 루프
+// 벽돌깨기 게임 - PHASE 1 UPGRADE
+// Part 2: 그리기 함수 (UI 개선 적용)
 // =======================================================
 
-// 이 파일은 Part 1 다음에 실행되어야 합니다!
+// ✨ Phase 1: 배경 그리기
+function drawBackground() {
+    const config = LEVEL_CONFIGS[level];
+    ctx.fillStyle = config.bgColor;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+}
 
-// 1. 그리기 함수들
+// ✨ Phase 1: 향상된 하트 아이콘 그리기
+function drawHeart(x, y, size, filled = true) {
+    ctx.save();
+    ctx.translate(x, y);
+    
+    ctx.beginPath();
+    ctx.moveTo(0, size * 0.3);
+    ctx.bezierCurveTo(-size * 0.5, -size * 0.3, -size, size * 0.1, 0, size);
+    ctx.bezierCurveTo(size, size * 0.1, size * 0.5, -size * 0.3, 0, size * 0.3);
+    ctx.closePath();
+    
+    if (filled) {
+        ctx.fillStyle = '#FF1744';
+        ctx.fill();
+        // 하이라이트
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath();
+        ctx.arc(-size * 0.2, size * 0.1, size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    } else {
+        ctx.strokeStyle = '#FF1744';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    
+    ctx.restore();
+}
 
+// ✨ Phase 1: 상단 UI 바 그리기
+function drawTopUI() {
+    // 반투명 배경
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, WIDTH, 50);
+    
+    // 왼쪽: 하트 생명
+    let heartX = 15;
+    for (let i = 0; i < 3; i++) {
+        drawHeart(heartX, 25, 8, i < lives);
+        heartX += 25;
+    }
+    
+    // 중앙: 점수
+    ctx.font = 'bold 20px Arial';
+    ctx.fillStyle = '#FFD700';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${score}`, WIDTH / 2, 32);
+    
+    // 점수 아이콘
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#FFF';
+    ctx.fillText('🏆', WIDTH / 2 - 40, 30);
+    
+    // 오른쪽: 레벨 표시
+    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#FFF';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Lv.${level}`, WIDTH - 15, 30);
+}
+
+// ✨ Phase 1: 파워업 타이머 게이지 그리기
+function drawPowerupTimers() {
+    let yOffset = 55;
+    const barWidth = 100;
+    const barHeight = 8;
+    const xPos = WIDTH - barWidth - 15;
+    
+    for (let key in activePowerups) {
+        const pw = activePowerups[key];
+        if (pw.active && pw.remaining > 0) {
+            const percentage = pw.remaining / pw.max;
+            
+            // 아이콘 매핑
+            const icons = {
+                fire: '🔥',
+                mega: '⚫',
+                magnetic: '🧲',
+                long: '📏'
+            };
+            
+            const colors = {
+                fire: '#FF4500',
+                mega: '#FFA500',
+                magnetic: '#00FFFF',
+                long: '#32CD32'
+            };
+            
+            // 배경 바
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(xPos - 5, yOffset - 5, barWidth + 30, barHeight + 10);
+            
+            // 아이콘
+            ctx.font = '12px Arial';
+            ctx.fillText(icons[key], xPos - 18, yOffset + 6);
+            
+            // 게이지 배경
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(xPos, yOffset, barWidth, barHeight);
+            
+            // 게이지 진행
+            ctx.fillStyle = colors[key];
+            ctx.fillRect(xPos, yOffset, barWidth * percentage, barHeight);
+            
+            // 테두리
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(xPos, yOffset, barWidth, barHeight);
+            
+            yOffset += 18;
+        }
+    }
+}
+
+// ✨ Phase 1: 튜토리얼 툴팁 그리기
+function drawTutorial() {
+    if (showTutorial && tutorialOpacity > 0) {
+        ctx.save();
+        ctx.globalAlpha = tutorialOpacity;
+        
+        // 반투명 배경
+        const boxWidth = 280;
+        const boxHeight = 60;
+        const boxX = (WIDTH - boxWidth) / 2;
+        const boxY = HEIGHT / 2 - 50;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // 테두리
+        ctx.strokeStyle = '#00FFFF';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        
+        // 텍스트
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('👆 화면을 터치하여', WIDTH / 2, boxY + 25);
+        ctx.fillText('패들을 이동하세요', WIDTH / 2, boxY + 45);
+        
+        ctx.restore();
+        
+        // 페이드아웃 효과
+        tutorialOpacity -= 0.005;
+        if (tutorialOpacity <= 0) {
+            showTutorial = false;
+        }
+    }
+}
+
+// 공 그리기
 function drawBall(ball) {
-    // 트레일 그리기
+    // 트레일
     if (ball.trail && ball.trail.length > 0) {
         for (let i = 0; i < ball.trail.length; i++) {
             const t = ball.trail[i];
@@ -297,7 +481,7 @@ function drawBall(ball) {
         }
     }
     
-    // 메가볼 후광 효과
+    // 메가볼 후광
     if (ball.isMega) {
         ctx.beginPath();
         ctx.arc(ball.x, ball.y, ball.radius + 8, 0, Math.PI * 2);
@@ -309,7 +493,7 @@ function drawBall(ball) {
         ctx.closePath();
     }
     
-    // 파이어볼 불꽃 효과
+    // 파이어볼 불꽃
     if (ball.isFire) {
         for (let i = 0; i < 3; i++) {
             const angle = Math.random() * Math.PI * 2;
@@ -352,8 +536,9 @@ function drawBall(ball) {
     ctx.closePath();
 }
 
+// ✨ Phase 1: 향상된 패들 그리기 (입체감)
 function drawPaddle() {
-    // 자석 패들 자기장 효과
+    // 자석 효과
     if (isMagneticActive) {
         const paddleCenterX = paddleX + PADDLE_WIDTH / 2;
         const paddleCenterY = HEIGHT - PADDLE_HEIGHT / 2;
@@ -370,28 +555,38 @@ function drawPaddle() {
         }
     }
     
-    // 패들 본체
-    ctx.beginPath();
-    ctx.rect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+    // ✨ Phase 1: 그림자 효과
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(paddleX + 2, HEIGHT - PADDLE_HEIGHT + 2, PADDLE_WIDTH, PADDLE_HEIGHT);
     
-    let paddleColor;
+    // 패들 그라데이션
+    const gradient = ctx.createLinearGradient(paddleX, HEIGHT - PADDLE_HEIGHT, paddleX, HEIGHT);
+    
     if (isMagneticActive) {
-        paddleColor = "#00FFFF";
+        gradient.addColorStop(0, '#00FFFF');
+        gradient.addColorStop(1, '#0088AA');
     } else if (isLongPaddleActive) {
-        paddleColor = "#FF4500";
+        gradient.addColorStop(0, '#FF6B35');
+        gradient.addColorStop(1, '#CC3300');
     } else {
-        paddleColor = "#0095DD";
+        gradient.addColorStop(0, '#0095DD');
+        gradient.addColorStop(1, '#006699');
     }
     
-    ctx.fillStyle = paddleColor;
-    ctx.fill();
+    ctx.fillStyle = gradient;
+    ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
     
+    // ✨ Phase 1: 상단 하이라이트
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, 3);
+    
+    // 테두리
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.closePath();
+    ctx.strokeRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
 }
 
+// ✨ Phase 1: 향상된 벽돌 그리기 (입체감 + 그림자)
 function drawBricks() {
     for(let c = 0; c < brickColumnCount; c++) {
         for(let r = 0; r < brickRowCount; r++) {
@@ -402,42 +597,48 @@ function drawBricks() {
                 bricks[c][r].x = brickX;
                 bricks[c][r].y = brickY;
                 
-                ctx.beginPath();
-                ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                // ✨ Phase 1: 그림자
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(brickX + 2, brickY + 2, brickWidth, brickHeight);
                 
+                // 벽돌 그라데이션
                 const hue = 360 / brickRowCount * r;
-                ctx.fillStyle = `hsl(${hue}, 80%, 50%)`; 
-                ctx.fill();
+                const gradient = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
+                gradient.addColorStop(0, `hsl(${hue}, 80%, 60%)`);
+                gradient.addColorStop(1, `hsl(${hue}, 80%, 40%)`);
                 
+                ctx.fillStyle = gradient;
+                ctx.fillRect(brickX, brickY, brickWidth, brickHeight);
+                
+                // ✨ Phase 1: 상단 하이라이트 (입체감)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(brickX, brickY, brickWidth, 3);
+                
+                // ✨ Phase 1: 하단 어둡게 (입체감)
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+                ctx.fillRect(brickX, brickY + brickHeight - 3, brickWidth, 3);
+                
+                // 테두리
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                 ctx.lineWidth = 1;
-                ctx.stroke();
-                ctx.closePath();
+                ctx.strokeRect(brickX, brickY, brickWidth, brickHeight);
             }
         }
     }
 }
 
-function drawScore() {
-    ctx.font = "bold 16px Arial";
-    ctx.fillStyle = "#0095DD";
-    ctx.fillText("Score: " + score, 8, 20);
-}
-
-function drawLives() {
-    ctx.font = "bold 16px Arial";
-    ctx.fillStyle = "#0095DD";
-    ctx.fillText("Lives: " + lives, WIDTH - 65, 20);
-}
-
+// ✨ Phase 1: 향상된 파워업 그리기
 function drawPowerups() {
     for (const p of powerups) {
+        // 후광 펄스 효과
+        const pulseSize = 3 + Math.sin(Date.now() / 200) * 2;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius + 3, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.radius + pulseSize, 0, Math.PI * 2);
         ctx.fillStyle = p.color + '40';
         ctx.fill();
         ctx.closePath();
         
+        // 파워업 본체
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
@@ -447,18 +648,16 @@ function drawPowerups() {
         ctx.stroke();
         ctx.closePath();
         
+        // 아이콘
         ctx.fillStyle = 'white';
         ctx.font = 'bold 10px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const icon = p.type === 'MULTIBALL' ? 'M' : 
-                     p.type === 'LONG_PADDLE' ? 'L' : 
-                     p.type === 'MEGA_BALL' ? 'G' :
-                     p.type === 'FIRE_BALL' ? 'F' : 'A';
-        ctx.fillText(icon, p.x, p.y);
+        ctx.fillText(p.icon, p.x, p.y);
     }
 }
 
+// 파티클 그리기
 function drawParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
@@ -480,7 +679,13 @@ function drawParticles() {
     }
 }
 
-// 2. 파워업 활성화 함수들
+console.log("✅ Phase 1 - Part 2 로드 완료");
+// =======================================================
+// 벽돌깨기 게임 - PHASE 1 UPGRADE
+// Part 3: 충돌 처리, 게임 로직, 메인 루프
+// =======================================================
+
+// 파워업 활성화 함수들
 
 function activateLongPaddle() {
     if (isLongPaddleActive && longPaddleTimer) {
@@ -491,10 +696,15 @@ function activateLongPaddle() {
     PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio * 2;
     isLongPaddleActive = true;
     
+    // ✨ Phase 1: 타이머 상태 업데이트
+    activePowerups.long.active = true;
+    activePowerups.long.remaining = LONG_PADDLE_DURATION;
+    
     longPaddleTimer = setTimeout(() => {
         PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio;
         isLongPaddleActive = false;
         longPaddleTimer = null;
+        activePowerups.long.active = false;
     }, LONG_PADDLE_DURATION);
     
     playSound('powerup');
@@ -505,6 +715,11 @@ function activateMegaBall() {
         ball.radius = 24;
         ball.isMega = true;
     });
+    
+    // ✨ Phase 1: 타이머 상태 업데이트
+    activePowerups.mega.active = true;
+    activePowerups.mega.remaining = 10000;
+    
     playSound('powerup');
     
     setTimeout(() => {
@@ -512,6 +727,7 @@ function activateMegaBall() {
             ball.radius = 8;
             ball.isMega = false;
         });
+        activePowerups.mega.active = false;
     }, 10000);
 }
 
@@ -519,12 +735,18 @@ function activateFireBall() {
     balls.forEach(ball => {
         ball.isFire = true;
     });
+    
+    // ✨ Phase 1: 타이머 상태 업데이트
+    activePowerups.fire.active = true;
+    activePowerups.fire.remaining = 12000;
+    
     playSound('powerup');
     
     setTimeout(() => {
         balls.forEach(ball => {
             ball.isFire = false;
         });
+        activePowerups.fire.active = false;
     }, 12000);
 }
 
@@ -534,11 +756,17 @@ function activateMagnetic() {
     }
     
     isMagneticActive = true;
+    
+    // ✨ Phase 1: 타이머 상태 업데이트
+    activePowerups.magnetic.active = true;
+    activePowerups.magnetic.remaining = MAGNETIC_DURATION;
+    
     playSound('powerup');
     
     magneticTimer = setTimeout(() => {
         isMagneticActive = false;
         magneticTimer = null;
+        activePowerups.magnetic.active = false;
     }, MAGNETIC_DURATION);
 }
 
@@ -574,7 +802,19 @@ function activateMultiball(ball) {
     playSound('powerup');
 }
 
-// 3. 충돌 처리 함수들
+// ✨ Phase 1: 파워업 타이머 업데이트
+function updatePowerupTimers(deltaTime) {
+    for (let key in activePowerups) {
+        if (activePowerups[key].active) {
+            activePowerups[key].remaining -= deltaTime;
+            if (activePowerups[key].remaining <= 0) {
+                activePowerups[key].remaining = 0;
+            }
+        }
+    }
+}
+
+// 충돌 처리 함수들
 
 function powerupCollisionDetection() {
     for (let i = powerups.length - 1; i >= 0; i--) {
@@ -727,7 +967,7 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
         playSound('ping');
     } 
     
-    // 패들 영역 충돌 체크
+    // 패들 영역 충돌
     if (ball.y + ball.radius >= HEIGHT - PADDLE_HEIGHT) {
         if (ball.x >= paddleX && ball.x <= paddleX + PADDLE_WIDTH && ball.dy > 0) {
             ball.dy = -Math.abs(ball.dy); 
@@ -763,7 +1003,7 @@ function handleBallLoss() {
             const speed = BALL_SPEED_BASE * config.speed_ratio;
             balls.push({
                 x: WIDTH / 2,
-                y: HEIGHT - 30,
+                y: HEIGHT - 80,
                 dx: speed,
                 dy: -speed,
                 radius: 8,
@@ -777,23 +1017,34 @@ function handleBallLoss() {
     }
 }
 
-
-// =======================================================
-// 4. 메인 게임 루프
-// =======================================================
+// 메인 게임 루프
 
 let animationId;
+let lastTime = Date.now();
 
 function draw() {
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    const currentTime = Date.now();
+    const deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
     
+    // ✨ Phase 1: 배경 그리기
+    drawBackground();
+    
+    // ✨ Phase 1: UI 그리기
+    drawTopUI();
     drawBricks(); 
     drawPaddle(); 
-    drawScore();
-    drawLives();
     drawPowerups();
     drawParticles();
+    
+    // ✨ Phase 1: 파워업 타이머 업데이트 & 그리기
+    updatePowerupTimers(deltaTime);
+    drawPowerupTimers();
+    
+    // ✨ Phase 1: 튜토리얼 그리기
+    drawTutorial();
 
+    // 공 처리
     for (let i = balls.length - 1; i >= 0; i--) {
         let ball = balls[i];
         
@@ -811,10 +1062,7 @@ function draw() {
     animationId = requestAnimationFrame(draw);
 }
 
-
-// =======================================================
-// 5. 게임 시작
-// =======================================================
+// 게임 시작
 
 function initializeAndStartGame() {
     if (canvas) {
@@ -826,4 +1074,5 @@ function initializeAndStartGame() {
 
 initializeAndStartGame();
 
-console.log("🎮 Part 2 로드 완료 - 게임 시작!");
+console.log("✅ Phase 1 - Part 3 로드 완료");
+console.log("🎮 Phase 1 업그레이드 완료! 게임 시작!");
