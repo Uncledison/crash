@@ -1,14 +1,12 @@
 // =======================================================
-// 1. 캔버스 및 초기 설정 (가장 중요한 부분)
+// 1. 캔버스 및 초기 설정
 // =======================================================
 const canvas = document.getElementById('myGameCanvas');
 
-// 🚨🚨🚨 Canvas 객체 로드 실패 시 코드 중단 방지 (안전 장치)
+// 🚨 Canvas 객체 검증 (HTML 연동 문제 방지)
 if (!canvas) {
-    console.error("오류: HTML에서 'myGameCanvas' ID를 가진 Canvas 요소를 찾을 수 없습니다. HTML 파일 점검 필요!");
-    alert("오류: 게임 실행을 위한 캔버스(Canvas) 요소를 찾을 수 없습니다. HTML 파일의 ID를 확인해 주세요.");
-    // 캔버스가 없으면 더 이상 진행하지 않습니다.
-    throw new Error("Canvas element not found."); 
+    console.error("Fatal Error: Canvas element not found.");
+    throw new Error("Canvas element not found. Check index.html ID='myGameCanvas'."); 
 }
 
 const ctx = canvas.getContext('2d');
@@ -20,7 +18,7 @@ const BALL_SPEED_BASE = 4;
 const PADDLE_HEIGHT = 10;
 const PADDLE_WIDTH_BASE = 75; 
 
-// 난이도별 설정 정의
+// 난이도 설정
 const LEVEL_CONFIGS = [
     null,
     { name: "Level 1 (Easy)", paddle_ratio: 2.0, speed_ratio: 1.0 },
@@ -45,14 +43,13 @@ let descentTimer = null;
 
 
 // =======================================================
-// 2. 사운드 및 벽돌 설정 (생략된 함수 내용 포함)
+// 2. 사운드 및 벽돌 설정
 // =======================================================
 const sounds = {
     ping: new Audio('assets/sounds/ping.mp3'), crash: new Audio('assets/sounds/crash.wav'), gameOver: new Audio('assets/sounds/game_over.wav'),
     powerup: new Audio('assets/sounds/powerup.mp3'), bgm01: new Audio('assets/sounds/bgm01.mp3'), bgm02: new Audio('assets/sounds/bgm02.mp3') 
 };
 sounds.bgm01.loop = true; sounds.bgm02.loop = true;
-
 function playSound(name) {
     const audio = sounds[name];
     if (audio) { audio.currentTime = 0; audio.play().catch(e => console.log("사운드 재생 실패:", e)); }
@@ -110,22 +107,30 @@ function descentBricks() {
 
 
 // =======================================================
-// 3. 레벨 변경 및 게임 초기화 로직
+// 3. 레벨 변경 및 게임 초기화 로직 (순서 최적화)
 // =======================================================
 function resetGame(newLevel) {
     const config = LEVEL_CONFIGS[newLevel];
+    
+    // 1. 상태 변수 초기화
     level = newLevel;
+    lives = 3; 
+    score = 0;
+    balls = [];
+    powerups = [];
+    brickOffsetTop = 30; 
+    
+    // 2. 난이도 및 위치 설정
     PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio;
+    paddleX = (WIDTH - PADDLE_WIDTH) / 2;
     const speed = BALL_SPEED_BASE * config.speed_ratio;
     
-    lives = 3; score = 0; balls = []; powerups = [];
-    paddleX = (WIDTH - PADDLE_WIDTH) / 2; brickOffsetTop = 30; 
-    
-    balls.push({ x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00" });
+    // 3. 벽돌 및 공 생성 (가장 마지막에 위치해야 안전함)
     initBricksForPattern(newLevel); 
+    balls.push({ x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00" });
     
+    // 4. 타이머 및 BGM 처리
     clearTimeout(descentTimer);
-    
     sounds.bgm01.pause(); sounds.bgm02.pause();
     if (isBgmPlaying) {
         (newLevel === 2 ? sounds.bgm02 : sounds.bgm01).play().catch(e => console.log("BGM 재생 실패:", e));
@@ -143,7 +148,7 @@ function changeGameLevel(newLevel) {
 
 
 // =======================================================
-// 4. 이벤트 핸들러 및 그리기 함수 (디자인 복원 포함)
+// 4. 이벤트 핸들러 및 그리기 함수 (생략)
 // =======================================================
 document.addEventListener("touchmove", touchMoveHandler, false);
 document.addEventListener("touchstart", touchMoveHandler, false);
@@ -280,7 +285,7 @@ function drawPowerups() {
 
 
 // =======================================================
-// 5. 파워업 및 충돌 처리 로직
+// 5. 충돌 처리 로직
 // =======================================================
 function activateLongPaddle() { /* ... */ }
 function activateMultiball() { /* ... */ }
@@ -347,7 +352,7 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    // 이 부분에서 블록, 패들, 볼이 그려집니다.
+    // 이 draw 함수가 requestAnimationFrame에 의해 반복 실행되면서 모든 오브젝트를 화면에 그립니다.
     drawBricks();
     drawPaddle();
     drawScore();
@@ -370,9 +375,9 @@ function draw() {
     animationId = requestAnimationFrame(draw);
 }
 
-// 게임 시작 통합 함수 (초기화 안정화)
+// 🚨 게임 시작 통합 함수 (Canvas 객체 검증 후 실행)
 function initializeAndStartGame() {
-    // 캔버스 객체가 정상적으로 할당된 경우에만 게임 시작
+    // Canvas가 정상적으로 로드된 경우에만 모든 초기화 및 게임 루프 시작
     if (canvas) {
         resetGame(1); 
         descentTimer = setTimeout(descentBricks, descentInterval);
