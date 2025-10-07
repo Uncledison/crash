@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>라원 라영이 벽돌깨기</title>
+    <title>라라네 벽돌깨기</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         /* 폰트 설정 (Apple 계열 폰트 최우선) */
@@ -13,7 +13,7 @@
 
         body { 
             margin: 0; 
-            /* 배경색을 순수 블랙 대신 아주 어두운 네이비 블루로 변경 */
+            /* 배경색을 아주 어두운 네이비 블루로 변경 */
             background-color: #030712; 
             display: flex; 
             flex-direction: column; 
@@ -28,40 +28,34 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 95%; 
+            width: 95%; /* 전체 컨테이너 폭 */
             max-width: 480px; 
         }
 
-        /* 캔버스에 깊이감 주는 스타일 */
+        /* 캔버스 스타일: 세로 3:4 비율 및 그림자 효과 */
         canvas { 
-            /* 캔버스 테두리를 밝은 시안색으로 변경 */
             border: 2px solid #E0F7FA; 
             background-color: #000;
             width: 100%; 
             aspect-ratio: 3 / 4; 
             display: block;
-            
-            /* ✨ 3D 액정 및 그림자 효과 */
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), /* 바깥쪽 네온 그림자 */
-                        inset 0 0 15px rgba(0, 0, 0, 0.8); /* 안쪽 그림자(깊이감) */
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 
+                        inset 0 0 15px rgba(0, 0, 0, 0.8);
         }
 
-        /* 게임 제목 스타일 */
+        /* 게임 제목 스타일 (네온/발광 효과) */
         #game-title {
-            color: #FFFF99; /* 밝은 노란색 */
-            font-size: 26px; /* 크기 증가 */
+            color: #FFFF99; 
+            font-size: 26px; 
             font-weight: bold;
             padding: 15px 0 10px 0;
-            
-            /* ✨ 네온/발광 효과 적용 */
             text-shadow: 0 0 5px #FFDD00, 
                          0 0 10px #FFDD00, 
                          0 0 20px #FF9900; 
         }
 
-        /* 조작 안내 버튼 스타일 */
+        /* 조작 안내 스타일 */
         #controls-hint {
-            /* 텍스트를 연한 회색으로 변경하여 보조적 역할만 수행 */
             color: #AAAAAA; 
             font-size: 14px;
             padding: 10px 0 15px 0;
@@ -80,16 +74,57 @@
             50% { opacity: 1; }
             100% { opacity: 0.5; }
         }
+
+        /* 레벨 선택 버튼 스타일 */
+        #levelControls {
+            margin-top: 15px;
+            margin-bottom: 15px;
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+        }
+
+        #levelControls button {
+            background-color: #0047AB; /* 진한 파랑 */
+            color: #FFFFFF;
+            border: 1px solid #4A90E2;
+            padding: 8px 10px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 14px;
+            margin: 5px 2px;
+            flex-grow: 1; /* 버튼이 공간을 균등하게 차지하도록 */
+        }
+        
+        #currentLevelDisplay {
+            color: #00FFFF; /* 밝은 시안 */
+            font-size: 16px;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <div id="game-title">라원 라영이 벽돌깨기</div>
+        <div id="game-title">라라네 벽돌깨기</div>
+
         <canvas id="myGameCanvas" width="480" height="768"></canvas> 
+        
         <div id="controls-hint">
             <span class="arrow">◀</span>
-            <span>좌우로 움직이세요</span>
+            <span>화면을 좌우로 밀어서 조작하세요</span>
             <span class="arrow">▶</span>
+        </div>
+        
+        <div id="levelControls">
+            <button id="level1Btn" onclick="changeGameLevel(1)">Level 1 (Easy)</button>
+            <button id="level2Btn" onclick="changeGameLevel(2)">Level 2 (Normal)</button>
+            <button id="level3Btn" onclick="changeGameLevel(3)">Level 3 (Hard)</button>
+            <p id="currentLevelDisplay">현재 레벨: Level 1 (Easy)</p>
         </div>
     </div>
     
