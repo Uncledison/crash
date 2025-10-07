@@ -13,56 +13,66 @@
 
         body { 
             margin: 0; 
-            background-color: #222; 
+            /* 배경색을 순수 블랙 대신 아주 어두운 네이비 블루로 변경 */
+            background-color: #030712; 
             display: flex; 
-            flex-direction: column; /* 제목, 캔버스, 버튼을 세로로 정렬 */
+            flex-direction: column; 
             justify-content: center; 
             align-items: center; 
             height: 100vh;
             overflow: hidden; 
-            font-family: 'AppleSDGothicNeo', sans-serif; /* 기본 폰트 적용 */
+            font-family: 'AppleSDGothicNeo', sans-serif;
         }
 
-        /* 캔버스 스타일 */
         #game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 95%; /* 전체 컨테이너 폭 */
+            width: 95%; 
             max-width: 480px; 
         }
 
+        /* 캔버스에 깊이감 주는 스타일 */
         canvas { 
-            border: 2px solid #fff; 
+            /* 캔버스 테두리를 밝은 시안색으로 변경 */
+            border: 2px solid #E0F7FA; 
             background-color: #000;
-            width: 100%; /* 컨테이너 폭에 맞춤 */
+            width: 100%; 
             aspect-ratio: 3 / 4; 
             display: block;
+            
+            /* ✨ 3D 액정 및 그림자 효과 */
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), /* 바깥쪽 네온 그림자 */
+                        inset 0 0 15px rgba(0, 0, 0, 0.8); /* 안쪽 그림자(깊이감) */
         }
 
         /* 게임 제목 스타일 */
         #game-title {
-            color: #FFDD00; /* 공 색상과 유사한 노란색 */
-            font-size: 24px;
+            color: #FFFF99; /* 밝은 노란색 */
+            font-size: 26px; /* 크기 증가 */
             font-weight: bold;
             padding: 15px 0 10px 0;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+            
+            /* ✨ 네온/발광 효과 적용 */
+            text-shadow: 0 0 5px #FFDD00, 
+                         0 0 10px #FFDD00, 
+                         0 0 20px #FF9900; 
         }
 
         /* 조작 안내 버튼 스타일 */
         #controls-hint {
-            color: #C0C0C0; /* 패들 색상과 유사한 회색 */
-            font-size: 16px;
+            /* 텍스트를 연한 회색으로 변경하여 보조적 역할만 수행 */
+            color: #AAAAAA; 
+            font-size: 14px;
             padding: 10px 0 15px 0;
             display: flex;
             align-items: center;
         }
         
-        /* 화살표 모양 (유니코드 사용) */
         .arrow {
-            font-size: 24px;
-            margin: 0 15px;
-            animation: pulse 1.5s infinite; /* 깜빡이는 애니메이션 */
+            font-size: 20px;
+            margin: 0 10px;
+            animation: pulse 1.5s infinite; 
         }
         
         @keyframes pulse {
@@ -70,18 +80,15 @@
             50% { opacity: 1; }
             100% { opacity: 0.5; }
         }
-
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="game-title">라라네 벽돌깨기</div>
-
         <canvas id="myGameCanvas" width="480" height="768"></canvas> 
-        
         <div id="controls-hint">
             <span class="arrow">◀</span>
-            <span>화면을 좌우로 밀어서 조작하세요</span>
+            <span>좌우로 움직이세요</span>
             <span class="arrow">▶</span>
         </div>
     </div>
