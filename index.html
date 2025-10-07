@@ -2,10 +2,10 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>라라네 벽돌깨기</title>
+    <title>라원 라영 벽돌깨기</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* 폰트 설정 (Apple 계열 폰트 최우선) */
+        /* 폰트 설정 */
         @font-face {
             font-family: 'AppleSDGothicNeo';
             src: local('AppleSDGothicNeo-Regular'), local('AppleSDGothicNeo-Bold');
@@ -13,121 +13,81 @@
 
         body { 
             margin: 0; 
-            /* 배경색을 아주 어두운 네이비 블루로 변경 */
-            background-color: #030712; 
+            padding: 0;
+            background: linear-gradient(135deg, #030712 0%, #0a0e27 100%);
             display: flex; 
-            flex-direction: column; 
+            flex-direction: column;
             justify-content: center; 
             align-items: center; 
-            height: 100vh;
-            overflow: hidden; 
-            font-family: 'AppleSDGothicNeo', sans-serif;
+            min-height: 100vh;
+            overflow: hidden;
+            font-family: 'AppleSDGothicNeo', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         #game-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 95%; /* 전체 컨테이너 폭 */
-            max-width: 480px; 
+            width: 95%;
+            max-width: 480px;
         }
 
-        /* 캔버스 스타일: 세로 3:4 비율 및 그림자 효과 */
-        canvas { 
-            border: 2px solid #E0F7FA; 
-            background-color: #000;
-            width: 100%; 
-            aspect-ratio: 3 / 4; 
-            display: block;
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 
-                        inset 0 0 15px rgba(0, 0, 0, 0.8);
-        }
-
-        /* 게임 제목 스타일 (네온/발광 효과) */
+        /* 게임 제목 (네온 효과) */
         #game-title {
             color: #FFFF99; 
-            font-size: 26px; 
+            font-size: 28px; 
             font-weight: bold;
-            padding: 15px 0 10px 0;
-            text-shadow: 0 0 5px #FFDD00, 
-                         0 0 10px #FFDD00, 
-                         0 0 20px #FF9900; 
+            padding: 15px 0;
+            text-shadow: 
+                0 0 5px #FFDD00, 
+                0 0 10px #FFDD00, 
+                0 0 20px #FF9900,
+                0 0 30px #FF6600; 
+            letter-spacing: 2px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
         }
 
-        /* 조작 안내 스타일 */
-        #controls-hint {
-            color: #AAAAAA; 
-            font-size: 14px;
-            padding: 10px 0 15px 0;
-            display: flex;
-            align-items: center;
-        }
-        
-        .arrow {
-            font-size: 20px;
-            margin: 0 10px;
-            animation: pulse 1.5s infinite; 
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 5px #FFDD00, 0 0 10px #FFDD00, 0 0 20px #FF9900; }
+            to { text-shadow: 0 0 10px #FFDD00, 0 0 20px #FFDD00, 0 0 30px #FF9900, 0 0 40px #FF6600; }
         }
 
-        /* 레벨 선택 버튼 스타일 */
-        #levelControls {
-            margin-top: 15px;
-            margin-bottom: 15px;
-            width: 100%;
-            display: flex;
-            justify-content: space-around;
-            flex-wrap: wrap;
-        }
-
-        #levelControls button {
-            background-color: #0047AB; /* 진한 파랑 */
-            color: #FFFFFF;
-            border: 1px solid #4A90E2;
-            padding: 8px 10px;
+        /* 캔버스 스타일 */
+        canvas { 
+            border: 2px solid #00FFFF; 
+            background-color: #000;
+            width: 100%; 
+            height: auto;
+            display: block;
+            box-shadow: 
+                0 0 20px rgba(0, 255, 255, 0.5),
+                0 0 40px rgba(0, 255, 255, 0.3),
+                inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 4px;
             cursor: pointer;
-            font-weight: bold;
-            border-radius: 5px;
-            font-size: 14px;
-            margin: 5px 2px;
-            flex-grow: 1; /* 버튼이 공간을 균등하게 차지하도록 */
         }
-        
-        #currentLevelDisplay {
-            color: #00FFFF; /* 밝은 시안 */
-            font-size: 16px;
-            font-weight: bold;
-            width: 100%;
-            text-align: center;
+
+        /* 작은 설명 텍스트 */
+        #hint {
+            color: #888;
+            font-size: 12px;
             margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="game-title">라원 라영 벽돌깨기</div>
-
-        <canvas id="myGameCanvas" width="480" height="768"></canvas> 
         
-        <div id="controls-hint">
-            <span class="arrow">◀</span>
-            <span>화면을 좌우로 밀어서 조작하세요</span>
-            <span class="arrow">▶</span>
-        </div>
+        <canvas id="myGameCanvas"></canvas>
         
-        <div id="levelControls">
-            <button id="level1Btn" onclick="changeGameLevel(1)">Level 1 (Easy)</button>
-            <button id="level2Btn" onclick="changeGameLevel(2)">Level 2 (Normal)</button>
-            <button id="level3Btn" onclick="changeGameLevel(3)">Level 3 (Hard)</button>
-            <p id="currentLevelDisplay">현재 레벨: Level 1 (Easy)</p>
-        </div>
+        <div id="hint">💡 왼쪽 상단 메뉴에서 설정 변경</div>
     </div>
     
-    <script src="game.js"></script>
+    <!-- Phase 2 Scripts -->
+    <script src="phase2_part1.js"></script>
+    <script src="phase2_part2.js"></script>
+    <script src="phase2_part3.js"></script>
 </body>
 </html>
