@@ -61,25 +61,10 @@
                 0 0 30px rgba(0, 255, 255, 0.4),
                 0 0 40px rgba(255, 0, 255, 0.3);
             transform: translate3d(0, 0, 0);
-            will-change: transform;
             backface-visibility: hidden;
             -webkit-font-smoothing: antialiased;
             width: 800px;
-            margin-bottom: 10px;
-        }
-
-        .game-subtitle {
-            font-size: 16px;
-            color: #0ff;
-            text-align: center;
-            letter-spacing: 2px;
-            margin-top: -10px;
-            margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-            transform: translate3d(0, 0, 0);
-            backface-visibility: hidden;
-            -webkit-font-smoothing: antialiased;
-            width: 800px;
+            margin-bottom: 20px;
         }
 
         #gameCanvas {
@@ -118,32 +103,10 @@
             color: #0ff;
         }
 
-        .loading {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #0ff;
-            font-size: 24px;
-            text-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-            z-index: 1000;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
+        /* 반응형 디자인 */
         @media (max-width: 850px) {
             .game-title {
                 font-size: 36px;
-                width: 100%;
-                max-width: 800px;
-            }
-            
-            .game-subtitle {
-                font-size: 14px;
                 width: 100%;
                 max-width: 800px;
             }
@@ -164,19 +127,12 @@
             .game-title {
                 font-size: 28px;
             }
-            
-            .game-subtitle {
-                font-size: 12px;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="loading" id="loading">⏳ 게임 로딩 중...</div>
-    
-    <div class="game-container" id="gameContainer">
+    <div class="game-container">
         <div class="game-title">NEON BREAKOUT</div>
-        <div class="game-subtitle">🎮 사이버펑크 벽돌깨기 🎮</div>
         
         <canvas id="gameCanvas" width="800" height="600"></canvas>
         
@@ -188,22 +144,5 @@
     </div>
 
     <script src="game.js"></script>
-    
-    <script>
-        // game.js 로딩 확인 후 로딩 화면 제거
-        (function checkGameLoaded() {
-            const loading = document.getElementById('loading');
-            
-            // Canvas가 준비되고 게임이 초기화될 때까지 대기
-            if (typeof canvas !== 'undefined' && canvas !== null) {
-                setTimeout(function() {
-                    loading.style.display = 'none';
-                }, 300);
-            } else {
-                // 100ms마다 다시 확인
-                setTimeout(checkGameLoaded, 100);
-            }
-        })();
-    </script>
 </body>
 </html>
