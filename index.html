@@ -2,34 +2,17 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>연산 브레이커 (Math Breaker)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Brick Breaker Game</title>
     <style>
-        body { 
-            margin: 0; 
-            background-color: #222; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            /* 화면 전체 높이를 사용하며, 스크롤 방지 */
-            height: 100vh;
-            overflow: hidden; 
-        }
-        canvas { 
-            /* 캔버스가 모바일 화면 중앙에 잘 보이도록 설정 */
-            border: 2px solid #fff; 
-            background-color: #000;
-            width: 90%; /* 화면 너비의 90% 사용 */
-            /* 가로:세로 비율을 3:4로 설정하여 모바일 세로에 최적화 */
-            aspect-ratio: 3 / 4; 
-            max-width: 480px; 
-            display: block;
-        }
+        * { padding: 0; margin: 0; }
+        canvas { background: #eee; display: block; margin: 0 auto; }
     </style>
 </head>
 <body>
-    <canvas id="myGameCanvas" width="480" height="640"></canvas> 
-    
-    <script src="game.js"></script>
+
+<canvas id="myCanvas" width="760" height="500"></canvas>
+
+<script src="game.js"></script>
+
 </body>
 </html>
