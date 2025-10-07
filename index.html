@@ -13,14 +13,37 @@
         body { 
             margin: 0; 
             padding: 0;
-            background: linear-gradient(135deg, #030712 0%, #0a0e27 100%);
+            background: 
+                radial-gradient(ellipse at top, #0a0e27 0%, #030712 50%, #000000 100%);
             display: flex; 
             flex-direction: column;
             justify-content: center; 
             align-items: center; 
             min-height: 100vh;
             overflow: hidden;
-            font-family: 'AppleSDGothicNeo', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'AppleSDGothicNeo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            position: relative;
+        }
+
+        /* 사이버펑크 배경 그리드 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes gridMove {
+            0% { transform: perspective(500px) rotateX(60deg) translateY(0); }
+            100% { transform: perspective(500px) rotateX(60deg) translateY(50px); }
         }
 
         #game-container {
@@ -29,52 +52,168 @@
             align-items: center;
             width: 95%;
             max-width: 480px;
+            z-index: 1;
         }
 
+        /* 사이버펑크 네온 제목 */
         #game-title {
             color: #FFFF99; 
-            font-size: 28px; 
+            font-size: 32px; 
             font-weight: bold;
-            padding: 15px 0;
+            padding: 20px 0;
             text-shadow: 
                 0 0 5px #FFDD00, 
                 0 0 10px #FFDD00, 
                 0 0 20px #FF9900,
-                0 0 30px #FF6600; 
-            letter-spacing: 2px;
-            animation: titleGlow 2s ease-in-out infinite alternate;
+                0 0 30px #FF6600,
+                0 0 40px #FF6600; 
+            letter-spacing: 3px;
+            animation: titlePulse 2s ease-in-out infinite alternate;
+            position: relative;
         }
 
-        @keyframes titleGlow {
-            from { text-shadow: 0 0 5px #FFDD00, 0 0 10px #FFDD00, 0 0 20px #FF9900; }
-            to { text-shadow: 0 0 10px #FFDD00, 0 0 20px #FFDD00, 0 0 30px #FF9900, 0 0 40px #FF6600; }
+        #game-title::before {
+            content: '라원 라영 벽돌깨기';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            color: #00FFFF;
+            text-shadow: 
+                0 0 10px #00FFFF,
+                0 0 20px #00FFFF,
+                0 0 30px #00FFFF;
+            opacity: 0.3;
+            animation: glitch 3s infinite;
         }
 
+        @keyframes titlePulse {
+            from { 
+                text-shadow: 
+                    0 0 5px #FFDD00, 
+                    0 0 10px #FFDD00, 
+                    0 0 20px #FF9900; 
+            }
+            to { 
+                text-shadow: 
+                    0 0 10px #FFDD00, 
+                    0 0 20px #FFDD00, 
+                    0 0 30px #FF9900, 
+                    0 0 40px #FF6600,
+                    0 0 50px #FF6600; 
+            }
+        }
+
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 2px); }
+        }
+
+        /* 사이버펑크 캔버스 스타일 */
         canvas { 
-            border: 2px solid #00FFFF; 
+            border: 3px solid #00FFFF; 
             background-color: #000;
             width: 100%; 
             height: auto;
             display: block;
             box-shadow: 
-                0 0 20px rgba(0, 255, 255, 0.5),
-                0 0 40px rgba(0, 255, 255, 0.3),
-                inset 0 0 20px rgba(0, 0, 0, 0.8);
+                0 0 10px rgba(0, 255, 255, 0.5),
+                0 0 20px rgba(0, 255, 255, 0.4),
+                0 0 30px rgba(0, 255, 255, 0.3),
+                0 0 40px rgba(0, 255, 255, 0.2),
+                inset 0 0 30px rgba(0, 255, 255, 0.1);
             border-radius: 4px;
             cursor: pointer;
+            position: relative;
+            animation: borderGlow 2s ease-in-out infinite alternate;
         }
 
+        @keyframes borderGlow {
+            from { 
+                box-shadow: 
+                    0 0 10px rgba(0, 255, 255, 0.5),
+                    0 0 20px rgba(0, 255, 255, 0.4),
+                    0 0 30px rgba(0, 255, 255, 0.3),
+                    inset 0 0 30px rgba(0, 255, 255, 0.1);
+            }
+            to { 
+                box-shadow: 
+                    0 0 20px rgba(0, 255, 255, 0.7),
+                    0 0 30px rgba(0, 255, 255, 0.6),
+                    0 0 40px rgba(0, 255, 255, 0.5),
+                    0 0 50px rgba(0, 255, 255, 0.4),
+                    inset 0 0 40px rgba(0, 255, 255, 0.2);
+            }
+        }
+
+        /* 사이버펑크 힌트 텍스트 */
         #hint {
-            color: #888;
-            font-size: 12px;
-            margin-top: 10px;
+            color: #00FFFF;
+            font-size: 13px;
+            margin-top: 15px;
             text-align: center;
+            text-shadow: 
+                0 0 5px #00FFFF,
+                0 0 10px #00FFFF;
+            animation: hintBlink 2s ease-in-out infinite;
+            padding: 8px 20px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            background: rgba(0, 255, 255, 0.05);
         }
 
-        #loading {
-            color: #00FFFF;
-            font-size: 16px;
-            padding: 20px;
+        @keyframes hintBlink {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* 코너 장식 */
+        .corner {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #00FFFF;
+        }
+
+        .corner.top-left {
+            top: -2px;
+            left: -2px;
+            border-right: none;
+            border-bottom: none;
+            box-shadow: -2px -2px 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .corner.top-right {
+            top: -2px;
+            right: -2px;
+            border-left: none;
+            border-bottom: none;
+            box-shadow: 2px -2px 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .corner.bottom-left {
+            bottom: -2px;
+            left: -2px;
+            border-right: none;
+            border-top: none;
+            box-shadow: -2px 2px 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .corner.bottom-right {
+            bottom: -2px;
+            right: -2px;
+            border-left: none;
+            border-top: none;
+            box-shadow: 2px 2px 10px rgba(0, 255, 255, 0.5);
+        }
+
+        #canvas-wrapper {
+            position: relative;
+            display: inline-block;
         }
     </style>
 </head>
@@ -82,25 +221,17 @@
     <div id="game-container">
         <div id="game-title">라원 라영 벽돌깨기</div>
         
-        <canvas id="myGameCanvas"></canvas>
+        <div id="canvas-wrapper">
+            <canvas id="myGameCanvas"></canvas>
+            <div class="corner top-left"></div>
+            <div class="corner top-right"></div>
+            <div class="corner bottom-left"></div>
+            <div class="corner bottom-right"></div>
+        </div>
         
-        <div id="hint">💡 왼쪽 상단 메뉴에서 설정 변경</div>
-        <div id="loading">게임 로딩 중...</div>
+        <div id="hint">💡 왼쪽 상단 메뉴(☰)에서 설정 변경</div>
     </div>
     
-    <!-- 단일 통합 스크립트 -->
     <script src="game.js"></script>
-    
-    <script>
-        // 로딩 상태 체크
-        window.addEventListener('load', () => {
-            const loading = document.getElementById('loading');
-            if (loading) {
-                setTimeout(() => {
-                    loading.style.display = 'none';
-                }, 1000);
-            }
-        });
-    </script>
 </body>
 </html>
