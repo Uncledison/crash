@@ -8,13 +8,12 @@ if (!canvas) {
     throw new Error("Canvas element not found. Check index.html ID='myGameCanvas'."); 
 }
 
-// 캔버스 크기 강제 설정 및 변수 정의
-canvas.width = 480; 
-canvas.height = 768;
-
 const ctx = canvas.getContext('2d');
 const WIDTH = canvas.width;  
 const HEIGHT = canvas.height; 
+
+canvas.width = 480; 
+canvas.height = 768;
 
 // 기본 설정 상수 및 레벨 설정
 const BALL_SPEED_BASE = 4;
@@ -44,7 +43,7 @@ let descentTimer = null;
 
 
 // =======================================================
-// 2. 사운드 및 벽돌 설정
+// 2. 사운드 및 벽돌 설정 (생략)
 // =======================================================
 const createSafeAudio = (path) => {
     try {
@@ -153,155 +152,108 @@ function changeGameLevel(newLevel) {
     const config = LEVEL_CONFIGS[newLevel];
     resetGame(newLevel);
     descentTimer = setTimeout(descentBricks, descentInterval); 
-    // document.getElementById('currentLevelDisplay').innerText = `현재 레벨: ${config.name}`; // HTML 요소가 있다고 가정하지 않음
+    // document.getElementById('currentLevelDisplay').innerText = `현재 레벨: ${config.name}`; // HTML 요소 업데이트는 생략
     alert(`${config.name}으로 난이도를 설정하고 게임을 다시 시작합니다!`);
 }
 
 
 // =======================================================
-// 4. 이벤트 핸들러 및 그리기 함수 (최종 디자인 적용)
+// 4. 이벤트 핸들러 및 그리기 함수 (생략)
 // =======================================================
 
-function mouseMoveHandler(e) {
-    const relativeX = e.clientX - canvas.offsetLeft;
-    if(relativeX > 0 && relativeX < WIDTH) {
-        if (relativeX - PADDLE_WIDTH / 2 > 0 && relativeX + PADDLE_WIDTH / 2 < WIDTH) {
-            paddleX = relativeX - PADDLE_WIDTH / 2;
-        } else if (relativeX - PADDLE_WIDTH / 2 <= 0) {
-            paddleX = 0; 
-        } else if (relativeX + PADDLE_WIDTH / 2 >= WIDTH) {
-            paddleX = WIDTH - PADDLE_WIDTH; 
-        }
-    }
-}
+document.addEventListener("touchmove", touchMoveHandler, false);
+document.addEventListener("touchstart", touchMoveHandler, false);
+document.addEventListener('mousemove', mouseMoveHandler, false); 
 
-function touchMoveHandler(e) { 
-    const touchX = e.touches[0].clientX - canvas.offsetLeft;
-    if(touchX > 0 && touchX < WIDTH) {
-        if (touchX - PADDLE_WIDTH / 2 > 0 && touchX + PADDLE_WIDTH / 2 < WIDTH) {
-            paddleX = touchX - PADDLE_WIDTH / 2;
-        } else if (touchX - PADDLE_WIDTH / 2 <= 0) {
-            paddleX = 0; 
-        } else if (touchX + PADDLE_WIDTH / 2 >= WIDTH) {
-            paddleX = WIDTH - PADDLE_WIDTH; 
-        }
-    }
-    e.preventDefault(); 
-}
+function mouseMoveHandler(e) { /* ... */ }
+function touchMoveHandler(e) { /* ... */ }
 
-// ✨ 볼 디자인 (불꽃 효과)
-function drawBall(ball) {
-    // 1. 외부 광채/불꽃
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#FF4500"; 
-    ctx.shadowBlur = 12; 
-    ctx.shadowColor = "#FF8C00"; 
-    ctx.fill();
-    ctx.closePath();
-    
-    // 2. 내부 코어
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius * 0.7, 0, Math.PI * 2);
-    ctx.fillStyle = "#FFFF66"; 
-    ctx.shadowBlur = 0; 
-    ctx.fill();
-    ctx.closePath();
-    
-    ctx.shadowBlur = 0; 
-}
+function drawBall(ball) { /* ... */ }
+function drawPaddle() { /* ... */ }
+function drawBricks() { /* ... */ }
+function drawScore() { /* ... */ }
+function drawLives() { /* ... */ }
+function drawPowerups() { /* ... */ }
 
-// ✨ 패들 디자인
-function drawPaddle() {
-    ctx.beginPath();
-    ctx.rect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
-    
-    const gradPaddle = ctx.createLinearGradient(paddleX, HEIGHT - PADDLE_HEIGHT, paddleX, HEIGHT);
-    gradPaddle.addColorStop(0, isLongPaddleActive ? "#FF6347" : "#0095DD"); 
-    gradPaddle.addColorStop(1, isLongPaddleActive ? "#CD5C5C" : "#0064C7");
-    
-    ctx.fillStyle = gradPaddle;
-    ctx.fill();
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.closePath();
-}
 
-// ✨ 벽돌 디자인
-function drawBricks() {
+// =======================================================
+// 5. 충돌 처리 로직 (핵심 수정)
+// =======================================================
+function activateLongPaddle() { /* ... */ }
+function activateMultiball() { /* ... */ }
+function powerupCollisionDetection() { /* ... */ }
+function checkWinCondition() { /* ... */ }
+
+
+function brickCollisionDetection(ball) {
     for(let c=0; c<brickColumnCount; c++) {
         for(let r=0; r<brickRowCount; r++) {
-            if(bricks[c] && bricks[c][r] && bricks[c][r].status === 1) { 
-                const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
-                const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-                
-                bricks[c][r].x = brickX;
-                bricks[c][r].y = brickY;
-                
-                ctx.beginPath();
-                ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                const hue = 360 / brickRowCount * r;
-                
-                const gradBrick = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
-                gradBrick.addColorStop(0, `hsl(${hue}, 80%, 75%)`); 
-                gradBrick.addColorStop(0.5, `hsl(${hue}, 80%, 50%)`); 
-                gradBrick.addColorStop(1, `hsl(${hue}, 80%, 35%)`); 
-
-                ctx.fillStyle = gradBrick;
-                ctx.fill();
-                ctx.strokeStyle = "#000000"; 
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-                ctx.closePath();
+            const b = bricks[c][r];
+            if (b.status === 1) {
+                if (ball.x + ball.radius > b.x && 
+                    ball.x - ball.radius < b.x + brickWidth && 
+                    ball.y + ball.radius > b.y && 
+                    ball.y - ball.radius < b.y + brickHeight) 
+                {
+                    b.status = 0; 
+                    score++; 
+                    playSound('ping'); 
+                    
+                    const prevX = ball.x - ball.dx;
+                    const prevY = ball.y - ball.dy;
+                    
+                    if (prevX <= b.x || prevX >= b.x + brickWidth) {
+                        ball.dx = -ball.dx; 
+                    } else {
+                        ball.dy = -ball.dy; 
+                    }
+                    
+                    if (Math.random() < POWERUP_PROBABILITY) { /* ... */ }
+                    
+                    checkWinCondition(); 
+                    return; 
+                }
             }
         }
     }
 }
 
-function drawScore() {
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#0095DD";
-    ctx.fillText("Score: " + score, 8, 20);
-}
-
-function drawLives() {
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#0095DD";
-    ctx.fillText("Lives: " + lives, WIDTH - 65, 20);
-}
-
-function drawPowerups() {
-    for (const p of powerups) {
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-        ctx.fillStyle = p.color;
-        ctx.fill();
-        ctx.strokeStyle = "#000000";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        ctx.closePath();
+// ✨ 볼이 사각 박스 내에서 모두 튕기도록 수정 (Final Fix)
+function ballWallAndPaddleCollision(ball, ballIndex) {
+    
+    // 1. 좌/우 벽 충돌 (튕김)
+    if (ball.x + ball.dx > WIDTH - ball.radius || ball.x + ball.dx < ball.radius) {
+        ball.dx = -ball.dx;
+        playSound('ping');
+    }
+    
+    // 2. 상단 벽 충돌 (튕김으로 복구)
+    if (ball.y + ball.dy < ball.radius) {
+        ball.dy = -ball.dy;
+        playSound('ping');
+    } 
+    
+    // 3. 패들 충돌
+    else if (ball.y + ball.dy > HEIGHT - ball.radius - PADDLE_HEIGHT) { 
+        if (ball.x > paddleX && ball.x < paddleX + PADDLE_WIDTH) { 
+            if (ball.y < HEIGHT - PADDLE_HEIGHT) {
+                ball.dy = -ball.dy; 
+                playSound('crash'); 
+                
+                const relativeIntersectX = (ball.x - (paddleX + PADDLE_WIDTH / 2));
+                ball.dx = relativeIntersectX * 0.2; 
+            }
+        } 
+        // 4. 바닥 충돌 (공 손실 처리)
+        // 공이 패들을 놓치고 캔버스 경계를 넘어섰을 때만 손실 처리
+        else if (ball.y + ball.dy > HEIGHT + ball.radius) { 
+            balls.splice(ballIndex, 1); 
+            handleBallLoss();
+        }
     }
 }
 
-
-// =======================================================
-// 5. 충돌 처리 및 로직 (생략)
-// =======================================================
-function activateLongPaddle() { /* ... */ }
-function activateMultiball(ball) { /* ... */ }
-function powerupCollisionDetection() { /* ... */ }
-function checkWinCondition() { /* ... */ }
-function brickCollisionDetection(ball) { /* ... */ }
-function ballWallAndPaddleCollision(ball, ballIndex) { /* ... */ }
 function handleBallLoss() { /* ... */ }
-
-
-// =======================================================
-// 6. 이벤트 리스너 추가 
-// =======================================================
-document.addEventListener('mousemove', mouseMoveHandler, false); 
-document.addEventListener('touchmove', touchMoveHandler, false);
 
 
 // =======================================================
@@ -310,7 +262,6 @@ document.addEventListener('touchmove', touchMoveHandler, false);
 let animationId;
 
 function draw() {
-    // ✨ 안전한 캔버스 초기화 (Clear) - 불필요한 잔상 효과 방지
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
     // 오브젝트 그리기
@@ -324,8 +275,6 @@ function draw() {
         let ball = balls[i];
         
         drawBall(ball);
-        
-        // 충돌 및 이동 로직 활성화
         brickCollisionDetection(ball);
         ballWallAndPaddleCollision(ball, i);
         
@@ -341,12 +290,14 @@ function draw() {
 // 게임 시작 통합 함수
 function initializeAndStartGame() {
     if (canvas) {
-        // 모든 초기화 실행
         resetGame(1); 
         descentTimer = setTimeout(descentBricks, descentInterval);
-        // 그리기 루프 시작
         draw();
     }
 }
+
+// 🚨 이벤트 리스너를 함수 정의 후에 추가
+document.addEventListener('mousemove', mouseMoveHandler, false); 
+document.addEventListener('touchmove', touchMoveHandler, false);
 
 initializeAndStartGame();
