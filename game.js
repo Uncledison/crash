@@ -1,18 +1,16 @@
 // =======================================================
-// 1. 캔버스 및 초기 설정 (480x768 세로형 해상도)
+// 1. 캔버스 및 초기 설정
 // =======================================================
 const canvas = document.getElementById('myGameCanvas');
 const ctx = canvas.getContext('2d');
 
-const WIDTH = canvas.width;  // 480
-const HEIGHT = canvas.height; // 768
+const WIDTH = canvas.width;  
+const HEIGHT = canvas.height; 
 
-// 기본 설정 상수
 const BALL_SPEED_BASE = 4;
 const PADDLE_HEIGHT = 10;
 const PADDLE_WIDTH_BASE = 75; 
 
-// 난이도별 설정 정의
 const LEVEL_CONFIGS = [
     null,
     { name: "Level 1 (Easy)", paddle_ratio: 2.0, speed_ratio: 1.0 },
@@ -20,15 +18,13 @@ const LEVEL_CONFIGS = [
     { name: "Level 3 (Hard)", paddle_ratio: 0.8, speed_ratio: 2.0 }
 ];
 
-// 게임 상태 변수
 let balls = [];
-let PADDLE_WIDTH = PADDLE_WIDTH_BASE * LEVEL_CONFIGS[1].paddle_ratio; // Level 1 기본값
+let PADDLE_WIDTH = PADDLE_WIDTH_BASE; 
 let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
 let lives = 3; 
 let score = 0;
-let level = 1; // 현재 설정된 난이도 레벨 (1, 2, 3)
+let level = 1; 
 
-// 상태 변수
 let isBgmPlaying = false; 
 let isLongPaddleActive = false;
 let longPaddleTimer = null;
@@ -113,7 +109,7 @@ function initBricksForPattern(patternIndex) {
     }
 }
 
-// 벽돌 하강 로직
+// 벽돌 하강 로직 (버그 수정 없음)
 function descentBricks() {
     for(let c=0; c<brickColumnCount; c++) {
         for(let r=0; r<brickRowCount; r++) {
@@ -153,7 +149,7 @@ function resetGame(newLevel) {
     balls = [];
     powerups = [];
     paddleX = (WIDTH - PADDLE_WIDTH) / 2;
-    brickOffsetTop = 30;
+    brickOffsetTop = 30; // 벽돌 위치 초기화
     
     // 3. 공 생성 및 속도 적용
     balls.push({ x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00" });
@@ -161,7 +157,7 @@ function resetGame(newLevel) {
     // 4. 벽돌 패턴 초기화
     initBricksForPattern(newLevel); 
 
-    // 5. 타이머 리셋
+    // 5. 타이머 리셋 및 재설정
     clearTimeout(descentTimer);
     descentTimer = setTimeout(descentBricks, descentInterval);
     
@@ -186,8 +182,9 @@ function changeGameLevel(newLevel) {
 
 
 // =======================================================
-// 4. 이벤트 핸들러
+// 4. 이벤트 핸들러 및 그리기 함수 (전체 복구)
 // =======================================================
+
 document.addEventListener("touchmove", touchMoveHandler, false);
 document.addEventListener("touchstart", touchMoveHandler, false);
 
@@ -211,11 +208,6 @@ function touchMoveHandler(e) {
     
     e.preventDefault(); 
 }
-
-
-// =======================================================
-// 5. 그리기 함수 (코드 복원)
-// =======================================================
 
 function drawBall(ball) {
     ctx.beginPath();
@@ -306,7 +298,7 @@ function drawPowerups() {
 
 
 // =======================================================
-// 6. 파워업 및 충돌 처리 로직 (코드 복원)
+// 5. 파워업 로직
 // =======================================================
 
 function activateLongPaddle() {
@@ -320,7 +312,6 @@ function activateLongPaddle() {
     longPaddleTimer = setTimeout(() => {
         PADDLE_WIDTH = PADDLE_WIDTH_BASE * LEVEL_CONFIGS[level].paddle_ratio; // 현재 레벨 설정으로 복귀
         isLongPaddleActive = false;
-        // 패들X 보정은 복귀 로직에서 제거 (복잡성 증가 방지)
     }, LONG_PADDLE_DURATION);
 }
 
@@ -346,6 +337,46 @@ function powerupCollisionDetection() {
                 activateLongPaddle();
             }
             powerups.splice(i, 1); 
+        }
+    }
+}
+
+
+// =======================================================
+// 6. 충돌 처리 및 레벨 클리어 로직
+// =======================================================
+
+function checkWinCondition() {
+    bricksRemaining--;
+    if (bricksRemaining === 0) {
+        clearTimeout(descentTimer);
+        let nextPattern = level + 1;
+        
+        sounds.bgm01.pause();
+        sounds.bgm02.pause();
+
+        if (nextPattern > levelPatterns.length) {
+            playSound('gameOver'); 
+            alert(`축하합니다! 최고 난이도 패턴(${level})까지 모두 클리어했습니다! 최종 점수: ${score}`);
+            document.location.reload(); 
+        } else {
+            playSound('powerup'); 
+            alert(`패턴 ${level} 클리어! 다음 패턴 ${nextPattern}로 넘어갑니다.`);
+            
+            // 다음 패턴으로 초기화 (난이도 설정은 유지)
+            level = nextPattern; 
+            initBricksForPattern(nextPattern);
+            
+            // 공 속도 설정은 현재 난이도(level)의 설정을 따름
+            const config = LEVEL_CONFIGS[level];
+            const speed = BALL_SPEED_BASE * config.speed_ratio;
+            
+            balls = [{x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"}];
+            paddleX = (WIDTH - PADDLE_WIDTH) / 2;
+            brickOffsetTop = 30;
+            
+            (level === 2 ? sounds.bgm02 : sounds.bgm01).play();
+            descentTimer = setTimeout(descentBricks, descentInterval);
         }
     }
 }
@@ -409,7 +440,8 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
                     document.location.reload(); 
                 } else {
                     // 공 재생성
-                    const speed = BALL_SPEED_BASE * LEVEL_CONFIGS[level].speed_ratio;
+                    const config = LEVEL_CONFIGS[level];
+                    const speed = BALL_SPEED_BASE * config.speed_ratio;
                     balls.push({x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"});
                     paddleX = (WIDTH - PADDLE_WIDTH) / 2;
                 }
@@ -427,7 +459,7 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    // ✨ 모든 그리기 함수 호출 (블록/볼/패들 표시 핵심)
+    // ✨ 핵심: 모든 그리기 함수 호출로 요소 표시 복구
     drawBricks();
     drawPaddle();
     drawScore();
