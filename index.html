@@ -19,10 +19,8 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
-            position: relative;
         }
 
-        /* 배경 그리드 효과 */
         body::before {
             content: '';
             position: fixed;
@@ -60,10 +58,6 @@
                 0 0 20px rgba(0, 255, 255, 0.6),
                 0 0 30px rgba(0, 255, 255, 0.4),
                 0 0 40px rgba(255, 0, 255, 0.3);
-            transform: translate3d(0, 0, 0);
-            backface-visibility: hidden;
-            -webkit-font-smoothing: antialiased;
-            width: 800px;
             margin-bottom: 20px;
         }
 
@@ -76,7 +70,6 @@
                 inset 0 0 60px rgba(0, 255, 255, 0.05);
             background: rgba(10, 10, 30, 0.8);
             display: block;
-            transform: translate3d(0, 0, 0);
         }
 
         .controls-hint {
@@ -85,10 +78,6 @@
             text-align: center;
             margin-top: 10px;
             text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
-            transform: translate3d(0, 0, 0);
-            backface-visibility: hidden;
-            -webkit-font-smoothing: antialiased;
-            width: 800px;
         }
 
         .controls-hint span {
@@ -103,29 +92,16 @@
             color: #0ff;
         }
 
-        /* 반응형 디자인 */
         @media (max-width: 850px) {
             .game-title {
                 font-size: 36px;
-                width: 100%;
-                max-width: 800px;
             }
-            
             .controls-hint {
                 font-size: 12px;
-                width: 100%;
-                max-width: 800px;
             }
-
             #gameCanvas {
                 max-width: 100%;
                 height: auto;
-            }
-        }
-
-        @media (max-width: 600px) {
-            .game-title {
-                font-size: 28px;
             }
         }
     </style>
