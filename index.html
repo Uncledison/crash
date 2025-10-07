@@ -5,7 +5,6 @@
     <title>라원 라영 벽돌깨기</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        /* 폰트 설정 */
         @font-face {
             font-family: 'AppleSDGothicNeo';
             src: local('AppleSDGothicNeo-Regular'), local('AppleSDGothicNeo-Bold');
@@ -32,7 +31,6 @@
             max-width: 480px;
         }
 
-        /* 게임 제목 (네온 효과) */
         #game-title {
             color: #FFFF99; 
             font-size: 28px; 
@@ -52,7 +50,6 @@
             to { text-shadow: 0 0 10px #FFDD00, 0 0 20px #FFDD00, 0 0 30px #FF9900, 0 0 40px #FF6600; }
         }
 
-        /* 캔버스 스타일 */
         canvas { 
             border: 2px solid #00FFFF; 
             background-color: #000;
@@ -67,12 +64,17 @@
             cursor: pointer;
         }
 
-        /* 작은 설명 텍스트 */
         #hint {
             color: #888;
             font-size: 12px;
             margin-top: 10px;
             text-align: center;
+        }
+
+        #loading {
+            color: #00FFFF;
+            font-size: 16px;
+            padding: 20px;
         }
     </style>
 </head>
@@ -83,11 +85,22 @@
         <canvas id="myGameCanvas"></canvas>
         
         <div id="hint">💡 왼쪽 상단 메뉴에서 설정 변경</div>
+        <div id="loading">게임 로딩 중...</div>
     </div>
     
-    <!-- Phase 2 Scripts -->
-    <script src="phase2_part1.js"></script>
-    <script src="phase2_part2.js"></script>
-    <script src="phase2_part3.js"></script>
+    <!-- 단일 통합 스크립트 -->
+    <script src="game.js"></script>
+    
+    <script>
+        // 로딩 상태 체크
+        window.addEventListener('load', () => {
+            const loading = document.getElementById('loading');
+            if (loading) {
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                }, 1000);
+            }
+        });
+    </script>
 </body>
 </html>
