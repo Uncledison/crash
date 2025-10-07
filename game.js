@@ -12,7 +12,6 @@ const ctx = canvas.getContext('2d');
 const WIDTH = canvas.width;  
 const HEIGHT = canvas.height; 
 
-// Canvas 크기 강제 설정 (안정성)
 canvas.width = 480; 
 canvas.height = 768;
 
@@ -77,92 +76,140 @@ const brickOffsetLeft = (WIDTH - totalBrickAreaWidth) / 2;
 let bricks = []; let bricksRemaining = 0;
 let powerups = []; const POWERUP_PROBABILITY = 0.15; 
 
-function Powerup(x, y) { /* ... */ }
-const levelPatterns = [ /* ... */ ];
+function Powerup(x, y) {
+    this.x = x; this.y = y; this.radius = 8; this.dy = 1.5; 
+    if (Math.random() < 0.5) { this.color = "yellow"; this.type = 'MULTIBALL'; } 
+    else { this.color = "lime"; this.type = 'LONG_PADDLE'; }
+}
 
-function initBricksForPattern(patternIndex) { /* ... */ }
-function descentBricks() { /* ... */ }
+const levelPatterns = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1]
+];
+
+function initBricksForPattern(patternIndex) {
+    const pattern = levelPatterns[(patternIndex - 1) % levelPatterns.length]; 
+    bricksRemaining = 0;
+    bricks = []; // ✨ bricks 배열을 여기서 다시 초기화 (안정성)
+    for(let c=0; c<brickColumnCount; c++) {
+        bricks[c] = [];
+        for(let r=0; r<brickRowCount; r++) {
+            const index = r * brickColumnCount + c;
+            bricks[c][r] = { x: 0, y: 0, status: pattern[index] };
+            if (pattern[index] === 1) { bricksRemaining++; }
+        }
+    }
+}
+
+function descentBricks() {
+    for(let c=0; c<brickColumnCount; c++) {
+        for(let r=0; r<brickRowCount; r++) {
+            const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+            if (bricks[c][r].status === 1 && brickY + brickHeight >= HEIGHT - PADDLE_HEIGHT) {
+                clearTimeout(descentTimer);
+                sounds.bgm01.pause(); sounds.bgm02.pause(); playSound('gameOver'); 
+                alert(`Game Over! 벽돌에 깔렸습니다! 최종 점수: ${score}`);
+                document.location.reload(); return;
+            }
+        }
+    }
+    brickOffsetTop += (brickHeight + brickPadding);
+    descentTimer = setTimeout(descentBricks, descentInterval);
+}
 
 
 // =======================================================
-// 3. 레벨 변경 및 게임 초기화 로직 (생략)
+// 3. 레벨 변경 및 게임 초기화 로직
 // =======================================================
-function resetGame(newLevel) { /* ... */ }
-function changeGameLevel(newLevel) { /* ... */ }
+
+function resetGame(newLevel) {
+    const config = LEVEL_CONFIGS[newLevel];
+    
+    level = newLevel;
+    lives = 3; 
+    score = 0;
+    balls = [];
+    powerups = [];
+    brickOffsetTop = 30; 
+    
+    PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio;
+    paddleX = (WIDTH - PADDLE_WIDTH) / 2;
+    const speed = BALL_SPEED_BASE * config.speed_ratio;
+    
+    // ✨ 벽돌 및 공 생성 (가장 중요)
+    initBricksForPattern(newLevel); 
+    balls.push({ x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00" });
+    
+    clearTimeout(descentTimer);
+    sounds.bgm01.pause(); sounds.bgm02.pause();
+    if (isBgmPlaying) {
+        (newLevel === 2 ? sounds.bgm02 : sounds.bgm01).play().catch(e => console.log("BGM 재생 실패:", e));
+    }
+}
+
+function changeGameLevel(newLevel) {
+    if (newLevel < 1 || newLevel > 3) return;
+    const config = LEVEL_CONFIGS[newLevel];
+    resetGame(newLevel);
+    descentTimer = setTimeout(descentBricks, descentInterval); 
+    document.getElementById('currentLevelDisplay').innerText = `현재 레벨: ${config.name}`;
+    alert(`${config.name}으로 난이도를 설정하고 게임을 다시 시작합니다!`);
+}
 
 
 // =======================================================
 // 4. 이벤트 핸들러 및 그리기 함수 (생략)
 // =======================================================
-document.addEventListener("touchmove", touchMoveHandler, false);
-document.addEventListener("touchstart", touchMoveHandler, false);
 
 function touchMoveHandler(e) { /* ... */ }
 function drawBall(ball) { /* ... */ }
 function drawPaddle() { /* ... */ }
-function drawBricks() { /* ... */ }
+function drawBricks() {
+    for(let c=0; c<brickColumnCount; c++) {
+        for(let r=0; r<brickRowCount; r++) {
+            if(bricks[c] && bricks[c][r] && bricks[c][r].status === 1) { // ✨ Null/Undefined 체크 강화
+                const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                
+                bricks[c][r].x = brickX;
+                bricks[c][r].y = brickY;
+                
+                ctx.beginPath();
+                ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                const hue = 360 / brickRowCount * r;
+                
+                const gradBrick = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
+                gradBrick.addColorStop(0, `hsl(${hue}, 80%, 75%)`); 
+                gradBrick.addColorStop(0.5, `hsl(${hue}, 80%, 50%)`); 
+                gradBrick.addColorStop(1, `hsl(${hue}, 80%, 35%)`); 
+
+                ctx.fillStyle = gradBrick;
+                ctx.fill();
+                ctx.strokeStyle = "#000000"; 
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+    }
+}
+
 function drawScore() { /* ... */ }
 function drawLives() { /* ... */ }
 function drawPowerups() { /* ... */ }
 
 
 // =======================================================
-// 5. 충돌 처리 로직
+// 5. 충돌 처리 로직 (생략)
 // =======================================================
 function activateLongPaddle() { /* ... */ }
 function activateMultiball() { /* ... */ }
 function powerupCollisionDetection() { /* ... */ }
 function checkWinCondition() { /* ... */ }
 function brickCollisionDetection(ball) { /* ... */ }
-
-function ballWallAndPaddleCollision(ball, ballIndex) {
-    // 1. 좌/우 벽 충돌 (튕김)
-    if (ball.x + ball.dx > WIDTH - ball.radius || ball.x + ball.dx < ball.radius) {
-        ball.dx = -ball.dx;
-        playSound('ping');
-    }
-    
-    // 2. 상단 벽 충돌 (✨ 상단 벽을 뚫고 사라지는 오류 해결: 튕김으로 복구)
-    if (ball.y + ball.dy < ball.radius) {
-        ball.dy = -ball.dy; // 방향 반전
-        playSound('ping');
-    } 
-    
-    // 3. 패들 충돌
-    else if (ball.y + ball.dy > HEIGHT - ball.radius - PADDLE_HEIGHT) { 
-        if (ball.x > paddleX && ball.x < paddleX + PADDLE_WIDTH) { 
-            if (ball.y < HEIGHT - PADDLE_HEIGHT) {
-                ball.dy = -ball.dy; 
-                playSound('crash'); 
-                
-                const relativeIntersectX = (ball.x - (paddleX + PADDLE_WIDTH / 2));
-                ball.dx = relativeIntersectX * 0.2; 
-            }
-        } 
-        // 4. 바닥 충돌 (공 손실 처리)
-        else if (ball.y + ball.dy > HEIGHT + ball.radius) { 
-            balls.splice(ballIndex, 1); 
-            handleBallLoss();
-        }
-    }
-}
-
-function handleBallLoss() {
-    if (balls.length === 0) {
-        lives--;
-        if (!lives) {
-            clearTimeout(descentTimer); 
-            sounds.bgm01.pause(); sounds.bgm02.pause(); playSound('gameOver'); 
-            alert("GAME OVER! 최종 점수: " + score);
-            document.location.reload(); 
-        } else {
-            const config = LEVEL_CONFIGS[level];
-            const speed = BALL_SPEED_BASE * config.speed_ratio;
-            balls.push({x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"});
-            paddleX = (WIDTH - PADDLE_WIDTH) / 2;
-        }
-    }
-}
+function ballWallAndPaddleCollision(ball, ballIndex) { /* ... */ }
+function handleBallLoss() { /* ... */ }
 
 
 // =======================================================
@@ -173,8 +220,8 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    drawBricks();
-    drawPaddle();
+    drawBricks(); // ✨ 블록 그리기
+    drawPaddle(); // ✨ 패들 그리기
     drawScore();
     drawLives();
     drawPowerups();
