@@ -1,93 +1,10 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 NEON BREAKOUT - 사이버펑크 벽돌깨기
+// 🎮 NEON BREAKOUT - Phase 1 (안정화 버전)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ⭐ 태블릿용 에러 표시 패널 (맨 위에 추가!)
-(function() {
-    const errorDiv = document.createElement('div');
-    errorDiv.id = 'errorPanel';
-    errorDiv.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        max-height: 200px;
-        background: rgba(255, 0, 0, 0.9);
-        color: white;
-        padding: 10px;
-        font-family: monospace;
-        font-size: 12px;
-        overflow-y: auto;
-        z-index: 10000;
-        display: none;
-        border-bottom: 3px solid red;
-    `;
-    document.body.appendChild(errorDiv);
-
-    // 콘솔 에러를 화면에 표시
-    window.onerror = function(msg, url, line, col, error) {
-        errorDiv.style.display = 'block';
-        errorDiv.innerHTML += `
-            <div style="border-bottom: 1px solid rgba(255,255,255,0.3); padding: 5px; margin: 5px 0;">
-                ❌ <strong>에러 발생!</strong><br>
-                📝 메시지: ${msg}<br>
-                📍 위치: Line ${line}, Col ${col}<br>
-                📄 파일: ${url}<br>
-                ${error ? `🔍 상세: ${error.stack}` : ''}
-            </div>
-        `;
-        return false;
-    };
-
-    // console.log도 화면에 표시
-    const originalLog = console.log;
-    const originalError = console.error;
-    const originalWarn = console.warn;
-
-    console.log = function(...args) {
-        originalLog.apply(console, args);
-        if (args[0] && args[0].toString().includes('❌')) {
-            errorDiv.style.display = 'block';
-            errorDiv.innerHTML += `<div style="color: #ffcccc; padding: 3px;">📋 ${args.join(' ')}</div>`;
-        }
-    };
-
-    console.error = function(...args) {
-        originalError.apply(console, args);
-        errorDiv.style.display = 'block';
-        errorDiv.innerHTML += `<div style="color: #ff6666; padding: 3px; font-weight: bold;">❌ ${args.join(' ')}</div>`;
-    };
-
-    console.warn = function(...args) {
-        originalWarn.apply(console, args);
-        errorDiv.style.display = 'block';
-        errorDiv.innerHTML += `<div style="color: #ffff99; padding: 3px;">⚠️ ${args.join(' ')}</div>`;
-    };
-})();
-
-console.log("━━━━━━━━━━━━━━━━━━━━━━");
-console.log("🎮 게임 스크립트 로딩 시작...");
-console.log("━━━━━━━━━━━━━━━━━━━━━━");
-
-// Canvas 초기화
 const canvas = document.getElementById("gameCanvas");
-
-// Canvas 체크
-if (!canvas) {
-    alert("게임을 로드할 수 없습니다. 페이지를 새로고침해주세요.");
-    throw new Error("Canvas를 찾을 수 없습니다!");
-}
-
 const ctx = canvas.getContext("2d");
 
-if (!ctx) {
-    alert("게임을 로드할 수 없습니다. 브라우저가 Canvas를 지원하지 않습니다.");
-    throw new Error("Canvas context를 가져올 수 없습니다!");
-}
-
-console.log("✅ Canvas 초기화 성공!");
-
-// 게임 설정
 const WIDTH = canvas.width;
 const HEIGHT = canvas.height;
 
@@ -178,83 +95,6 @@ let isMenuOpen = false;
 // 튜토리얼
 let showTutorial = true;
 
-// 사운드 (선택사항 - 없어도 게임 작동)
-let sounds = {
-    ping: null,
-    crash: null,
-    gameOver: null,
-    powerup: null,
-    levelup: null,
-    bgm01: null,
-    bgm02: null
-};
-
-let isBGMEnabled = false;
-let isSFXEnabled = false;
-
-// 사운드 로드 함수 (에러 무시)
-function loadSound(name, src) {
-    try {
-        const audio = new Audio(src);
-        audio.preload = 'auto';
-        audio.onerror = () => {
-            console.warn(`⚠️ 사운드 로드 실패: ${name}`);
-        };
-        return audio;
-    } catch (e) {
-        console.warn(`⚠️ 사운드 생성 실패: ${name}`);
-        return null;
-    }
-}
-
-// 사운드 초기화
-try {
-    sounds.ping = loadSound('ping', 'assets/sounds/ping.mp3');
-    sounds.crash = loadSound('crash', 'assets/sounds/crash.wav');
-    sounds.gameOver = loadSound('gameOver', 'assets/sounds/game_over.wav');
-    sounds.powerup = loadSound('powerup', 'assets/sounds/powerup.mp3');
-    sounds.levelup = loadSound('levelup', 'assets/sounds/powerup.mp3');
-    sounds.bgm01 = loadSound('bgm01', 'assets/sounds/bgm01.mp3');
-    sounds.bgm02 = loadSound('bgm02', 'assets/sounds/bgm02.mp3');
-    
-    if (sounds.bgm01) sounds.bgm01.loop = true;
-    if (sounds.bgm02) sounds.bgm02.loop = true;
-} catch (e) {
-    console.warn("⚠️ 사운드 초기화 실패 (게임은 계속됩니다)");
-}
-
-// 사운드 재생
-function playSound(name) {
-    if (!isSFXEnabled) return;
-    try {
-        const sound = sounds[name];
-        if (sound) {
-            sound.currentTime = 0;
-            sound.play().catch(() => {});
-        }
-    } catch (e) {}
-}
-
-// BGM 토글
-function toggleBGM() {
-    isBGMEnabled = !isBGMEnabled;
-    if (isBGMEnabled) {
-        try {
-            if (sounds.bgm01) sounds.bgm01.play().catch(() => {});
-        } catch (e) {}
-    } else {
-        try {
-            if (sounds.bgm01) sounds.bgm01.pause();
-            if (sounds.bgm02) sounds.bgm02.pause();
-        } catch (e) {}
-    }
-}
-
-// SFX 토글
-function toggleSFX() {
-    isSFXEnabled = !isSFXEnabled;
-}
-
 // 파티클 클래스
 class Particle {
     constructor(x, y, color, isFirework = false) {
@@ -314,11 +154,7 @@ function keyDownHandler(e) {
     } else if (e.key === "Escape") {
         e.preventDefault();
         isMenuOpen = !isMenuOpen;
-        if (isMenuOpen) {
-            isPaused = true;
-        } else {
-            isPaused = false;
-        }
+        isPaused = isMenuOpen;
     }
 }
 
@@ -331,19 +167,14 @@ function keyUpHandler(e) {
 }
 
 // 터치 이벤트
-canvas.addEventListener("touchstart", handleTouchStart);
-canvas.addEventListener("touchmove", handleTouchMove);
-canvas.addEventListener("touchend", handleTouchEnd);
-
 let touchX = null;
 
-function handleTouchStart(e) {
+canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
-    const touch = e.touches[0];
-    touchX = touch.clientX;
-}
+    touchX = e.touches[0].clientX;
+});
 
-function handleTouchMove(e) {
+canvas.addEventListener("touchmove", (e) => {
     e.preventDefault();
     if (!touchX) return;
     
@@ -354,12 +185,12 @@ function handleTouchMove(e) {
     paddleX = x - PADDLE_WIDTH / 2;
     if (paddleX < 0) paddleX = 0;
     if (paddleX + PADDLE_WIDTH > WIDTH) paddleX = WIDTH - PADDLE_WIDTH;
-}
+});
 
-function handleTouchEnd(e) {
+canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
     touchX = null;
-}
+});
 
 // 게임 초기화
 function resetGame(newLevel) {
@@ -430,7 +261,6 @@ function descentBricks() {
     }
     
     descentCount++;
-    playSound('crash');
     
     if (descentCount < maxDescent) {
         descentTimer = setTimeout(descentBricks, descentInterval);
@@ -452,7 +282,6 @@ function drawTopUI() {
     
     ctx.font = "bold 20px 'Courier New'";
     ctx.fillStyle = "#0ff";
-    ctx.textShadow = "0 0 10px rgba(0, 255, 255, 0.8)";
     ctx.fillText(`점수: ${score}`, 20, 35);
     ctx.fillText(`레벨: ${level}`, WIDTH / 2 - 40, 35);
     ctx.fillText(`생명: ${"❤️".repeat(lives)}`, WIDTH - 150, 35);
@@ -666,20 +495,13 @@ function drawMenu() {
     
     ctx.font = "20px Arial";
     ctx.fillStyle = "#FFF";
-    ctx.fillText(`BGM: ${isBGMEnabled ? 'ON' : 'OFF'} (B키)`, WIDTH / 2, 200);
-    ctx.fillText(`SFX: ${isSFXEnabled ? 'ON' : 'OFF'} (S키)`, WIDTH / 2, 250);
-    ctx.fillText("다시 시작 (R키)", WIDTH / 2, 300);
-    ctx.fillText("ESC로 돌아가기", WIDTH / 2, 400);
+    ctx.fillText("다시 시작 (R키)", WIDTH / 2, 250);
+    ctx.fillText("ESC로 돌아가기", WIDTH / 2, 350);
 }
 
 document.addEventListener("keydown", function(e) {
     if (!isMenuOpen) return;
-    
-    if (e.key === 'b' || e.key === 'B') {
-        toggleBGM();
-    } else if (e.key === 's' || e.key === 'S') {
-        toggleSFX();
-    } else if (e.key === 'r' || e.key === 'R') {
+    if (e.key === 'r' || e.key === 'R') {
         document.location.reload();
     }
 });
@@ -710,11 +532,9 @@ function drawLevelUpAnimation() {
     ctx.fillText(`다음 레벨: ${(level % (LEVEL_CONFIGS.length - 1)) + 1}`, WIDTH / 2, HEIGHT / 2 + 50);
 }
 
-// 파워업 함수들
+// 파워업 활성화
 function activateLongPaddle() {
-    if (isLongPaddleActive && longPaddleTimer) {
-        clearTimeout(longPaddleTimer);
-    }
+    if (isLongPaddleActive && longPaddleTimer) clearTimeout(longPaddleTimer);
     const config = LEVEL_CONFIGS[level];
     PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio * 2;
     isLongPaddleActive = true;
@@ -726,7 +546,6 @@ function activateLongPaddle() {
         longPaddleTimer = null;
         activePowerups.long.active = false;
     }, LONG_PADDLE_DURATION);
-    playSound('powerup');
 }
 
 function activateMegaBall() {
@@ -736,7 +555,6 @@ function activateMegaBall() {
     });
     activePowerups.mega.active = true;
     activePowerups.mega.remaining = 10000;
-    playSound('powerup');
     setTimeout(() => {
         balls.forEach(ball => {
             ball.radius = 8;
@@ -747,28 +565,20 @@ function activateMegaBall() {
 }
 
 function activateFireBall() {
-    balls.forEach(ball => {
-        ball.isFire = true;
-    });
+    balls.forEach(ball => ball.isFire = true);
     activePowerups.fire.active = true;
     activePowerups.fire.remaining = 12000;
-    playSound('powerup');
     setTimeout(() => {
-        balls.forEach(ball => {
-            ball.isFire = false;
-        });
+        balls.forEach(ball => ball.isFire = false);
         activePowerups.fire.active = false;
     }, 12000);
 }
 
 function activateMagnetic() {
-    if (isMagneticActive && magneticTimer) {
-        clearTimeout(magneticTimer);
-    }
+    if (isMagneticActive && magneticTimer) clearTimeout(magneticTimer);
     isMagneticActive = true;
     activePowerups.magnetic.active = true;
     activePowerups.magnetic.remaining = MAGNETIC_DURATION;
-    playSound('powerup');
     magneticTimer = setTimeout(() => {
         isMagneticActive = false;
         magneticTimer = null;
@@ -778,31 +588,20 @@ function activateMagnetic() {
 
 function activateMultiball(ball) {
     const speed = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-    const angle1 = Math.PI / 6;
-    const angle2 = -Math.PI / 6;
     balls.push({
-        x: ball.x,
-        y: ball.y,
-        dx: speed * Math.cos(angle1),
-        dy: -speed * Math.sin(angle1),
-        radius: ball.radius,
-        color: "#FFFF00",
-        isMega: ball.isMega,
-        isFire: ball.isFire,
-        trail: []
+        x: ball.x, y: ball.y,
+        dx: speed * Math.cos(Math.PI / 6),
+        dy: -speed * Math.sin(Math.PI / 6),
+        radius: ball.radius, color: "#FFFF00",
+        isMega: ball.isMega, isFire: ball.isFire, trail: []
     });
     balls.push({
-        x: ball.x,
-        y: ball.y,
-        dx: speed * Math.cos(angle2),
-        dy: -speed * Math.sin(angle2),
-        radius: ball.radius,
-        color: "#FFFF00",
-        isMega: ball.isMega,
-        isFire: ball.isFire,
-        trail: []
+        x: ball.x, y: ball.y,
+        dx: speed * Math.cos(-Math.PI / 6),
+        dy: -speed * Math.sin(-Math.PI / 6),
+        radius: ball.radius, color: "#FFFF00",
+        isMega: ball.isMega, isFire: ball.isFire, trail: []
     });
-    playSound('powerup');
 }
 
 function updatePowerupTimers(deltaTime) {
@@ -820,20 +619,14 @@ function updatePowerupTimers(deltaTime) {
 function startLevelUpAnimation() {
     isLevelingUp = true;
     isPaused = true;
-    playSound('levelup');
     levelUpAnimation.particles = [];
     const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FFD700', '#FFF'];
     for (let i = 0; i < 80; i++) {
-        levelUpAnimation.particles.push(new Particle(
-            WIDTH / 2,
-            HEIGHT / 2,
-            colors[Math.floor(Math.random() * colors.length)],
-            true
-        ));
+        levelUpAnimation.particles.push(new Particle(WIDTH / 2, HEIGHT / 2, colors[Math.floor(Math.random() * colors.length)], true));
     }
     levelUpAnimation.progress = 0;
-
-setTimeout(() => {
+    
+    setTimeout(() => {
         isLevelingUp = false;
         isPaused = false;
         const nextLevel = (level % (LEVEL_CONFIGS.length - 1)) + 1;
@@ -866,17 +659,11 @@ function powerupCollisionDetection() {
             p.y - p.radius <= HEIGHT &&
             p.x >= paddleX && 
             p.x <= paddleX + PADDLE_WIDTH) {
-            if (p.type === 'LONG_PADDLE') {
-                activateLongPaddle();
-            } else if (p.type === 'MULTIBALL' && balls.length > 0) {
-                activateMultiball(balls[0]); 
-            } else if (p.type === 'MEGA_BALL') {
-                activateMegaBall();
-            } else if (p.type === 'FIRE_BALL') {
-                activateFireBall();
-            } else if (p.type === 'MAGNETIC') {
-                activateMagnetic();
-            }
+            if (p.type === 'LONG_PADDLE') activateLongPaddle();
+            else if (p.type === 'MULTIBALL' && balls.length > 0) activateMultiball(balls[0]);
+            else if (p.type === 'MEGA_BALL') activateMegaBall();
+            else if (p.type === 'FIRE_BALL') activateFireBall();
+            else if (p.type === 'MAGNETIC') activateMagnetic();
             powerups.splice(i, 1);
         }
         else if (p.y > HEIGHT) {
@@ -906,18 +693,15 @@ function brickCollisionDetection(ball) {
                     ball.x - ball.radius < b.x + brickWidth && 
                     ball.y + ball.radius > b.y && 
                     ball.y - ball.radius < b.y + brickHeight) {
-                    b.status = 0; 
-                    score += 10; 
+                    b.status = 0;
+                    score += 10;
                     bricksRemaining--;
-                    playSound('crash'); 
+                    
                     const brickColor = `hsl(${360 / brickRowCount * r}, 80%, 50%)`;
                     for (let i = 0; i < 15; i++) {
-                        particles.push(new Particle(
-                            b.x + brickWidth / 2,
-                            b.y + brickHeight / 2,
-                            brickColor
-                        ));
+                        particles.push(new Particle(b.x + brickWidth / 2, b.y + brickHeight / 2, brickColor));
                     }
+                    
                     if (ball.isFire) {
                         for(let nc = Math.max(0, c - 1); nc <= Math.min(brickColumnCount - 1, c + 1); nc++) {
                             for(let nr = Math.max(0, r - 1); nr <= Math.min(brickRowCount - 1, r + 1); nr++) {
@@ -936,19 +720,22 @@ function brickCollisionDetection(ball) {
                             }
                         }
                     }
-                    const prevX = ball.x - ball.dx;
-                    const prevY = ball.y - ball.dy;
+                    
                     if (!ball.isMega) {
+                        const prevX = ball.x - ball.dx;
+                        const prevY = ball.y - ball.dy;
                         if (prevX <= b.x || prevX >= b.x + brickWidth) {
-                            ball.dx = -ball.dx; 
+                            ball.dx = -ball.dx;
                         } else {
-                            ball.dy = -ball.dy; 
+                            ball.dy = -ball.dy;
                         }
                     }
+                    
                     if (Math.random() < POWERUP_PROBABILITY) {
                         powerups.push(new Powerup(b.x + brickWidth / 2, b.y + brickHeight / 2));
                     }
-                    checkWinCondition(); 
+                    
+                    checkWinCondition();
                     if (!ball.isMega) return;
                 }
             }
@@ -975,32 +762,28 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
     }
     
     if (ball.x + ball.dx > WIDTH - ball.radius) {
-        ball.dx = -Math.abs(ball.dx); 
-        ball.x = WIDTH - ball.radius; 
-        playSound('ping');
+        ball.dx = -Math.abs(ball.dx);
+        ball.x = WIDTH - ball.radius;
     } else if (ball.x + ball.dx < ball.radius) {
-        ball.dx = Math.abs(ball.dx); 
-        ball.x = ball.radius; 
-        playSound('ping');
+        ball.dx = Math.abs(ball.dx);
+        ball.x = ball.radius;
     }
     
     if (ball.y + ball.dy < ball.radius) {
-        ball.dy = Math.abs(ball.dy); 
-        ball.y = ball.radius; 
-        playSound('ping');
-    } 
+        ball.dy = Math.abs(ball.dy);
+        ball.y = ball.radius;
+    }
     
     if (ball.y + ball.radius >= HEIGHT - PADDLE_HEIGHT) {
         if (ball.x >= paddleX && ball.x <= paddleX + PADDLE_WIDTH && ball.dy > 0) {
-            ball.dy = -Math.abs(ball.dy); 
-            ball.y = HEIGHT - PADDLE_HEIGHT - ball.radius; 
-            playSound('crash'); 
+            ball.dy = -Math.abs(ball.dy);
+            ball.y = HEIGHT - PADDLE_HEIGHT - ball.radius;
             const relativeIntersectX = (ball.x - (paddleX + PADDLE_WIDTH / 2));
             const normalizedIntersect = relativeIntersectX / (PADDLE_WIDTH / 2);
             ball.dx += normalizedIntersect * 2;
         } 
         else if (ball.y > HEIGHT) {
-            balls.splice(ballIndex, 1); 
+            balls.splice(ballIndex, 1);
             handleBallLoss();
         }
     }
@@ -1014,11 +797,6 @@ function handleBallLoss() {
                 clearTimeout(descentTimer);
                 descentTimer = null;
             }
-            try {
-                if (sounds.bgm01) sounds.bgm01.pause();
-                if (sounds.bgm02) sounds.bgm02.pause();
-            } catch (e) {}
-            playSound('gameOver'); 
             setTimeout(() => {
                 if (confirm(`게임 오버!\n최종 점수: ${score}\n\n다시 시작하시겠습니까?`)) {
                     document.location.reload();
@@ -1043,7 +821,6 @@ function handleBallLoss() {
     }
 }
 
-// 패들 이동
 function movePaddle() {
     if (rightPressed && paddleX < WIDTH - PADDLE_WIDTH) {
         paddleX += 7;
@@ -1062,8 +839,8 @@ function draw() {
     
     drawBackground();
     drawTopUI();
-    drawBricks(); 
-    drawPaddle(); 
+    drawBricks();
+    drawPaddle();
     drawPowerups();
     drawParticles();
     updatePowerupTimers(deltaTime);
@@ -1082,8 +859,8 @@ function draw() {
             drawBall(ball);
             brickCollisionDetection(ball);
             ballWallAndPaddleCollision(ball, i);
-            ball.x += ball.dx; 
-            ball.y += ball.dy; 
+            ball.x += ball.dx;
+            ball.y += ball.dy;
         }
         powerupCollisionDetection();
     } else {
@@ -1098,27 +875,8 @@ function draw() {
 }
 
 // 게임 시작
-function initializeAndStartGame() {
-    try {
-        console.log("🎮 게임 초기화 중...");
-        resetGame(1); 
-        descentTimer = setTimeout(descentBricks, descentInterval);
-        console.log("✅ 게임 시작!");
-        draw();
-        console.log("🎉 게임 완전 로드 완료!");
-    } catch (error) {
-        console.error("❌ 게임 초기화 실패:", error);
-        alert("게임을 로드할 수 없습니다. 콘솔을 확인해주세요.");
-    }
-}
+resetGame(1);
+descentTimer = setTimeout(descentBricks, descentInterval);
+draw();
 
-// DOM이 완전히 로드된 후 게임 시작
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeAndStartGame);
-} else {
-    initializeAndStartGame();
-}
-
-console.log("━━━━━━━━━━━━━━━━━━━━━━");
-console.log("🎉 게임 스크립트 로드 완료!");
-console.log("━━━━━━━━━━━━━━━━━━━━━━");
+console.log("🎉 게임 시작!");
