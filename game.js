@@ -43,7 +43,7 @@ let descentTimer = null;
 
 
 // =======================================================
-// 2. 사운드 및 벽돌 설정 (생략)
+// 2. 사운드 및 벽돌 설정
 // =======================================================
 const createSafeAudio = (path) => {
     try {
@@ -91,7 +91,7 @@ const levelPatterns = [
 function initBricksForPattern(patternIndex) {
     const pattern = levelPatterns[(patternIndex - 1) % levelPatterns.length]; 
     bricksRemaining = 0;
-    bricks = []; // ✨ bricks 배열을 여기서 다시 초기화 (안정성)
+    bricks = []; 
     for(let c=0; c<brickColumnCount; c++) {
         bricks[c] = [];
         for(let r=0; r<brickRowCount; r++) {
@@ -159,16 +159,62 @@ function changeGameLevel(newLevel) {
 
 
 // =======================================================
-// 4. 이벤트 핸들러 및 그리기 함수 (생략)
+// 4. 이벤트 핸들러 및 그리기 함수 (새로 구현됨)
 // =======================================================
 
-function touchMoveHandler(e) { /* ... */ }
-function drawBall(ball) { /* ... */ }
-function drawPaddle() { /* ... */ }
+// 🔑 마우스 이동 핸들러: 패들 움직임을 처리합니다.
+function mouseMoveHandler(e) {
+    const relativeX = e.clientX - canvas.offsetLeft;
+    if(relativeX > 0 && relativeX < WIDTH) {
+        // 패들이 캔버스 경계를 벗어나지 않도록 설정
+        if (relativeX - PADDLE_WIDTH / 2 > 0 && relativeX + PADDLE_WIDTH / 2 < WIDTH) {
+            paddleX = relativeX - PADDLE_WIDTH / 2;
+        } else if (relativeX - PADDLE_WIDTH / 2 <= 0) {
+            paddleX = 0; // 왼쪽 경계
+        } else if (relativeX + PADDLE_WIDTH / 2 >= WIDTH) {
+            paddleX = WIDTH - PADDLE_WIDTH; // 오른쪽 경계
+        }
+    }
+}
+
+function touchMoveHandler(e) { /* 터치 조작 로직은 여기에 들어갑니다. */ }
+
+
+// 🔑 drawBall: 공을 그립니다.
+function drawBall(ball) { 
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fillStyle = ball.color; 
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.closePath();
+}
+
+// 🔑 drawPaddle: 패들을 그립니다.
+function drawPaddle() {
+    ctx.beginPath();
+    ctx.rect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+    
+    // 패들 색상 (파워업 상태 반영)
+    const gradPaddle = ctx.createLinearGradient(paddleX, HEIGHT - PADDLE_HEIGHT, paddleX, HEIGHT);
+    gradPaddle.addColorStop(0, isLongPaddleActive ? "#FF6347" : "#0095DD"); // 롱 패들 상태에 따라 색상 변경
+    gradPaddle.addColorStop(1, isLongPaddleActive ? "#CD5C5C" : "#0064C7");
+    
+    ctx.fillStyle = gradPaddle;
+    ctx.fill();
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+}
+
+// drawBricks: 벽돌을 그립니다. (이전과 동일)
 function drawBricks() {
     for(let c=0; c<brickColumnCount; c++) {
         for(let r=0; r<brickRowCount; r++) {
-            if(bricks[c] && bricks[c][r] && bricks[c][r].status === 1) { // ✨ Null/Undefined 체크 강화
+            if(bricks[c] && bricks[c][r] && bricks[c][r].status === 1) { 
                 const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
                 const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
                 
@@ -195,13 +241,37 @@ function drawBricks() {
     }
 }
 
-function drawScore() { /* ... */ }
-function drawLives() { /* ... */ }
-function drawPowerups() { /* ... */ }
+// 🔑 drawScore: 점수를 그립니다.
+function drawScore() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Score: " + score, 8, 20);
+}
+
+// 🔑 drawLives: 남은 라이브를 그립니다.
+function drawLives() {
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#0095DD";
+    ctx.fillText("Lives: " + lives, WIDTH - 65, 20);
+}
+
+// 🔑 drawPowerups: 파워업 아이템을 그립니다.
+function drawPowerups() {
+    for (const p of powerups) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.closePath();
+    }
+}
 
 
 // =======================================================
-// 5. 충돌 처리 로직 (생략)
+// 5. 충돌 처리 로직 (생략 - 다음 단계에서 구현 예정)
 // =======================================================
 function activateLongPaddle() { /* ... */ }
 function activateMultiball() { /* ... */ }
@@ -213,6 +283,12 @@ function handleBallLoss() { /* ... */ }
 
 
 // =======================================================
+// 6. 이벤트 리스너 추가 (새로 추가)
+// =======================================================
+document.addEventListener('mousemove', mouseMoveHandler, false); 
+// document.addEventListener('touchmove', touchMoveHandler, false); // 모바일 터치 이벤트
+
+// =======================================================
 // 7. 메인 루프 및 시작 (Final)
 // =======================================================
 let animationId;
@@ -220,8 +296,8 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    drawBricks(); // ✨ 블록 그리기
-    drawPaddle(); // ✨ 패들 그리기
+    drawBricks(); 
+    drawPaddle(); 
     drawScore();
     drawLives();
     drawPowerups();
@@ -230,14 +306,16 @@ function draw() {
         let ball = balls[i];
         
         drawBall(ball);
-        brickCollisionDetection(ball);
-        ballWallAndPaddleCollision(ball, i);
+        
+        // ✨ 다음 단계에서 구현될 충돌 및 이동 로직
+        // brickCollisionDetection(ball);
+        // ballWallAndPaddleCollision(ball, i);
         
         ball.x += ball.dx; 
         ball.y += ball.dy; 
     }
     
-    powerupCollisionDetection();
+    // powerupCollisionDetection();
 
     animationId = requestAnimationFrame(draw);
 }
