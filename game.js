@@ -12,7 +12,6 @@ const HEIGHT = canvas.height;
 let ballRadius = 8;
 let x = WIDTH / 2;
 let y = HEIGHT - 30;
-// 속도를 약간 빠르게 조정
 let dx = 4;  
 let dy = -4; 
 
@@ -20,16 +19,17 @@ let dy = -4;
 const PADDLE_HEIGHT = 10;
 const PADDLE_WIDTH = 75;
 let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
-let lives = 3; // 라이프 추가
+let lives = 3; // 라이프
 
 
 // =======================================================
-// 2. 사운드 객체 초기화 (경로 확인: assets/sounds/ 로 설정되어야 함)
+// 2. 사운드 객체 초기화
 // =======================================================
 const sounds = {
-    // WAV 포맷은 브라우저 호환성이 떨어질 수 있어, ping.mp3를 범용 충돌음으로 사용
+    // 벽 충돌, 벽돌 충돌 시 사용
     ping: new Audio('assets/sounds/ping.mp3'),
-    crash: new Audio('assets/sounds/crash.wav'),
+    // 패들 충돌 시 요청된 crash 사운드 사용
+    crash: new Audio('assets/sounds/crash.wav'), 
     gameOver: new Audio('assets/sounds/game_over.wav')
 };
 
@@ -46,7 +46,6 @@ function playSound(name) {
 // 3. 벽돌 데이터 구조 생성
 // =======================================================
 
-// 벽돌 설정 변수
 const brickRowCount = 5;    
 const brickColumnCount = 8; 
 const brickWidth = 50;
@@ -54,12 +53,12 @@ const brickHeight = 15;
 const brickPadding = 10;
 const brickOffsetTop = 30;  
 const brickOffsetLeft = 30; 
+let bricksRemaining = brickColumnCount * brickRowCount;
 
 let bricks = [];
 for(let c=0; c<brickColumnCount; c++) {
     bricks[c] = [];
     for(let r=0; r<brickRowCount; r++) {
-        // status: 1이면 살아있음, 0이면 깨짐
         bricks[c][r] = { x: 0, y: 0, status: 1 };
     }
 }
@@ -73,17 +72,12 @@ document.addEventListener("touchmove", touchMoveHandler, false);
 document.addEventListener("touchstart", touchMoveHandler, false);
 
 function touchMoveHandler(e) {
-    // 캔버스의 실제 화면상 위치를 계산
     const rect = canvas.getBoundingClientRect();
-    
-    // 터치 지점의 X 좌표를 캔버스 내부 좌표로 변환
     const relativeX = (e.touches[0].clientX - rect.left) * (WIDTH / rect.width);
     
     if (relativeX > 0 && relativeX < WIDTH) {
-        // 패들이 터치 지점 중앙에 오도록 설정
         paddleX = relativeX - PADDLE_WIDTH / 2;
-
-        // 패들이 캔버스 밖으로 나가지 않도록 경계 처리
+        // 경계 처리
         if (paddleX < 0) {
             paddleX = 0;
         }
@@ -127,7 +121,6 @@ function drawBricks() {
                 
                 ctx.beginPath();
                 ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                // 줄에 따라 색깔을 다르게 설정 (시각적 재미 추가)
                 const hue = 360 / brickRowCount * r;
                 ctx.fillStyle = `hsl(${hue}, 70%, 50%)`; 
                 ctx.fill();
@@ -145,36 +138,31 @@ function drawLives() {
 
 
 // =======================================================
-// 6. 충돌 처리 (벽돌 충돌 로직 포함)
+// 6. 충돌 처리
 // =======================================================
+
+function checkWinCondition() {
+    bricksRemaining--;
+    if (bricksRemaining === 0) {
+        playSound('gameOver'); 
+        alert("축하합니다! 모든 벽돌을 깼어요!");
+        document.location.reload(); 
+    }
+}
 
 function brickCollisionDetection() {
     for(let c=0; c<brickColumnCount; c++) {
         for(let r=0; r<brickRowCount; r++) {
             const b = bricks[c][r];
             if (b.status === 1) {
-                // 공이 벽돌의 경계 안에 있는지 검사
                 if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-                    dy = -dy; // y축 방향 반전
-                    b.status = 0; // 벽돌 파괴
-                    playSound('crash'); // 파괴음 재생
-                    
-                    // 모든 벽돌을 깼는지 확인
+                    dy = -dy; 
+                    b.status = 0; 
+                    playSound('ping'); // 벽돌 파괴 시 일반 충돌음 사용
                     checkWinCondition(); 
                 }
             }
         }
-    }
-}
-
-let bricksRemaining = brickColumnCount * brickRowCount;
-
-function checkWinCondition() {
-    bricksRemaining--;
-    if (bricksRemaining === 0) {
-        playSound('gameOver'); // 승리 시에도 동일한 효과음 사용
-        alert("축하합니다! 모든 벽돌을 깼어요!");
-        document.location.reload(); 
     }
 }
 
@@ -193,17 +181,21 @@ function collisionDetection() {
         playSound('ping'); 
     } 
     
-    // 3. 바닥 충돌 및 패들 충돌 분기
-    else if (y + dy > HEIGHT - ballRadius - PADDLE_HEIGHT) {
-        // 3-1. 패들 충돌
-        if (x > paddleX && x < paddleX + PADDLE_WIDTH) {
-            // 공이 패들 윗면에 부딪힌 경우에만 반사되도록 정확히 검사 (y 좌표)
-            if (y + ballRadius < HEIGHT - PADDLE_HEIGHT) {
+    // 3. 패들 충돌 (수정된 로직)
+    // 공이 패들 높이에 도달했을 때
+    else if (y + dy > HEIGHT - ballRadius - PADDLE_HEIGHT) { 
+        
+        // 3-1. 패들 충돌 범위 확인
+        if (x > paddleX && x < paddleX + PADDLE_WIDTH) { 
+            
+            // **[버그 수정]** 공이 패들 위쪽에 있을 때만 튕기도록 명확히 검사
+            if (y < HEIGHT - PADDLE_HEIGHT) { 
                 dy = -dy; // 방향 반전
-                playSound('ping');
+                playSound('crash'); // **[요청 사항]** 패들 충돌 시 crash 사운드 재생
             }
         } 
-        // 3-2. 바닥 충돌 (라이프 감소 및 리셋)
+        
+        // 4. 바닥 충돌 (라이프 감소 및 리셋)
         else if (y + dy > HEIGHT - ballRadius) {
             lives--;
             if (!lives) {
@@ -236,7 +228,7 @@ function draw() {
     drawBall();
     drawPaddle();
     drawBricks();
-    drawLives(); // 라이프 표시
+    drawLives(); 
 
     // 3. 충돌 검사 및 위치 업데이트
     collisionDetection();
