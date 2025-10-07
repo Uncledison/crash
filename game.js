@@ -2,23 +2,19 @@
 // 1. 캔버스 및 초기 설정
 // =======================================================
 const canvas = document.getElementById('myGameCanvas');
-
-// 🚨 Canvas 객체 검증 (HTML 연동 문제 방지)
 if (!canvas) {
     console.error("Fatal Error: Canvas element not found.");
     throw new Error("Canvas element not found. Check index.html ID='myGameCanvas'."); 
 }
-
 const ctx = canvas.getContext('2d');
-const WIDTH = canvas.width;  // 480
-const HEIGHT = canvas.height; // 768
+const WIDTH = canvas.width;  
+const HEIGHT = canvas.height; 
 
-// 기본 설정 상수
+// 기본 설정 상수 및 레벨 설정
 const BALL_SPEED_BASE = 4;
 const PADDLE_HEIGHT = 10;
 const PADDLE_WIDTH_BASE = 75; 
 
-// 난이도 설정
 const LEVEL_CONFIGS = [
     null,
     { name: "Level 1 (Easy)", paddle_ratio: 2.0, speed_ratio: 1.0 },
@@ -26,13 +22,12 @@ const LEVEL_CONFIGS = [
     { name: "Level 3 (Hard)", paddle_ratio: 0.8, speed_ratio: 2.0 }
 ];
 
-// 게임 상태 변수
 let balls = [];
 let PADDLE_WIDTH = PADDLE_WIDTH_BASE; 
 let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
 let lives = 3; 
 let score = 0;
-let level = 1;
+let level = 1; 
 
 let isBgmPlaying = false; 
 let isLongPaddleActive = false;
@@ -43,17 +38,14 @@ let descentTimer = null;
 
 
 // =======================================================
-// 2. 사운드 및 벽돌 설정
+// 2. 사운드 및 벽돌 설정 (생략)
 // =======================================================
 const sounds = {
     ping: new Audio('assets/sounds/ping.mp3'), crash: new Audio('assets/sounds/crash.wav'), gameOver: new Audio('assets/sounds/game_over.wav'),
     powerup: new Audio('assets/sounds/powerup.mp3'), bgm01: new Audio('assets/sounds/bgm01.mp3'), bgm02: new Audio('assets/sounds/bgm02.mp3') 
 };
 sounds.bgm01.loop = true; sounds.bgm02.loop = true;
-function playSound(name) {
-    const audio = sounds[name];
-    if (audio) { audio.currentTime = 0; audio.play().catch(e => console.log("사운드 재생 실패:", e)); }
-}
+function playSound(name) { /* ... */ }
 
 const brickRowCount = 5; const brickColumnCount = 8; const brickWidth = 50;
 const brickHeight = 15; const brickPadding = 10;
@@ -64,234 +56,112 @@ const brickOffsetLeft = (WIDTH - totalBrickAreaWidth) / 2;
 let bricks = []; let bricksRemaining = 0;
 let powerups = []; const POWERUP_PROBABILITY = 0.15; 
 
-function Powerup(x, y) {
-    this.x = x; this.y = y; this.radius = 8; this.dy = 1.5; 
-    if (Math.random() < 0.5) { this.color = "yellow"; this.type = 'MULTIBALL'; } 
-    else { this.color = "lime"; this.type = 'LONG_PADDLE'; }
-}
+function Powerup(x, y) { /* ... */ }
+const levelPatterns = [ /* ... */ ];
 
-const levelPatterns = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1]
-];
-
-function initBricksForPattern(patternIndex) {
-    const pattern = levelPatterns[(patternIndex - 1) % levelPatterns.length]; 
-    bricksRemaining = 0;
-    for(let c=0; c<brickColumnCount; c++) {
-        bricks[c] = [];
-        for(let r=0; r<brickRowCount; r++) {
-            const index = r * brickColumnCount + c;
-            bricks[c][r] = { x: 0, y: 0, status: pattern[index] };
-            if (pattern[index] === 1) { bricksRemaining++; }
-        }
-    }
-}
-
-function descentBricks() {
-    for(let c=0; c<brickColumnCount; c++) {
-        for(let r=0; r<brickRowCount; r++) {
-            const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-            if (bricks[c][r].status === 1 && brickY + brickHeight >= HEIGHT - PADDLE_HEIGHT) {
-                clearTimeout(descentTimer);
-                sounds.bgm01.pause(); sounds.bgm02.pause(); playSound('gameOver'); 
-                alert(`Game Over! 벽돌에 깔렸습니다! 최종 점수: ${score}`);
-                document.location.reload(); return;
-            }
-        }
-    }
-    brickOffsetTop += (brickHeight + brickPadding);
-    descentTimer = setTimeout(descentBricks, descentInterval);
-}
+function initBricksForPattern(patternIndex) { /* ... */ }
+function descentBricks() { /* ... */ }
 
 
 // =======================================================
-// 3. 레벨 변경 및 게임 초기화 로직 (순서 최적화)
+// 3. 레벨 변경 및 게임 초기화 로직
 // =======================================================
-function resetGame(newLevel) {
-    const config = LEVEL_CONFIGS[newLevel];
-    
-    // 1. 상태 변수 초기화
-    level = newLevel;
-    lives = 3; 
-    score = 0;
-    balls = [];
-    powerups = [];
-    brickOffsetTop = 30; 
-    
-    // 2. 난이도 및 위치 설정
-    PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio;
-    paddleX = (WIDTH - PADDLE_WIDTH) / 2;
-    const speed = BALL_SPEED_BASE * config.speed_ratio;
-    
-    // 3. 벽돌 및 공 생성 (가장 마지막에 위치해야 안전함)
-    initBricksForPattern(newLevel); 
-    balls.push({ x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00" });
-    
-    // 4. 타이머 및 BGM 처리
-    clearTimeout(descentTimer);
-    sounds.bgm01.pause(); sounds.bgm02.pause();
-    if (isBgmPlaying) {
-        (newLevel === 2 ? sounds.bgm02 : sounds.bgm01).play().catch(e => console.log("BGM 재생 실패:", e));
-    }
-}
 
-function changeGameLevel(newLevel) {
-    if (newLevel < 1 || newLevel > 3) return;
-    const config = LEVEL_CONFIGS[newLevel];
-    resetGame(newLevel);
-    descentTimer = setTimeout(descentBricks, descentInterval); 
-    document.getElementById('currentLevelDisplay').innerText = `현재 레벨: ${config.name}`;
-    alert(`${config.name}으로 난이도를 설정하고 게임을 다시 시작합니다!`);
-}
+function resetGame(newLevel) { /* ... */ }
+function changeGameLevel(newLevel) { /* ... */ }
 
 
 // =======================================================
 // 4. 이벤트 핸들러 및 그리기 함수 (생략)
 // =======================================================
+
 document.addEventListener("touchmove", touchMoveHandler, false);
 document.addEventListener("touchstart", touchMoveHandler, false);
-
-function touchMoveHandler(e) {
-    const rect = canvas.getBoundingClientRect();
-    const relativeX = (e.touches[0].clientX - rect.left) * (WIDTH / rect.width);
-    
-    if (relativeX > 0 && relativeX < WIDTH) {
-        paddleX = relativeX - PADDLE_WIDTH / 2; 
-        
-        if (paddleX < 0) { paddleX = 0; }
-        if (paddleX + PADDLE_WIDTH > WIDTH) { paddleX = WIDTH - PADDLE_WIDTH; }
-    }
-    
-    if (!isBgmPlaying) {
-        (level === 2 ? sounds.bgm02 : sounds.bgm01).play().catch(e => {
-            console.log("BGM 자동 재생 차단됨. 첫 터치 후 재생 시작:", e);
-        });
-        isBgmPlaying = true;
-    }
-    
-    e.preventDefault(); 
-}
-
-function drawBall(ball) {
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = ball.color;
-    ctx.shadowBlur = 15; 
-    ctx.shadowColor = ball.color;
-    ctx.fill();
-    ctx.closePath();
-    
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ball.radius * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = "#FFFFFF"; 
-    ctx.shadowBlur = 0; 
-    ctx.fill();
-    ctx.closePath();
-    
-    ctx.shadowBlur = 0; 
-}
-
-function drawPaddle() {
-    const gradient = ctx.createLinearGradient(paddleX, HEIGHT - PADDLE_HEIGHT, paddleX + PADDLE_WIDTH, HEIGHT);
-    gradient.addColorStop(0, "#C0C0C0"); 
-    gradient.addColorStop(0.5, "#4B4B4B"); 
-    gradient.addColorStop(1, "#C0C0C0");
-
-    ctx.beginPath();
-    ctx.rect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
-    ctx.fillStyle = gradient;
-    ctx.fill();
-    
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.closePath();
-}
-
-function drawBricks() {
-    for(let c=0; c<brickColumnCount; c++) {
-        for(let r=0; r<brickRowCount; r++) {
-            if(bricks[c][r].status === 1) { 
-                const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
-                const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
-                
-                bricks[c][r].x = brickX;
-                bricks[c][r].y = brickY;
-                
-                ctx.beginPath();
-                ctx.rect(brickX, brickY, brickWidth, brickHeight);
-                const hue = 360 / brickRowCount * r;
-                
-                const gradBrick = ctx.createLinearGradient(brickX, brickY, brickX, brickY + brickHeight);
-                gradBrick.addColorStop(0, `hsl(${hue}, 80%, 75%)`); 
-                gradBrick.addColorStop(0.5, `hsl(${hue}, 80%, 50%)`); 
-                gradBrick.addColorStop(1, `hsl(${hue}, 80%, 35%)`); 
-
-                ctx.fillStyle = gradBrick;
-                ctx.fill();
-                ctx.strokeStyle = "#000000"; 
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-                ctx.closePath();
-            }
-        }
-    }
-}
-
-function drawScore() {
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#00FFFF"; 
-    ctx.fillText("Score: " + score, 8, 20);
-}
-
-function drawLives() {
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#00FFFF"; 
-    ctx.fillText("Lives: " + lives, WIDTH - 65, 20);
-}
-
-function drawPowerups() {
-    for (let i = powerups.length - 1; i >= 0; i--) {
-        let p = powerups[i];
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = p.color;
-
-        if (p.type === 'LONG_PADDLE') {
-            const w = p.radius * 3;
-            const h = p.radius * 0.8;
-            ctx.beginPath();
-            ctx.rect(p.x - w / 2, p.y - h / 2, w, h);
-            ctx.fillStyle = p.color;
-            ctx.fill();
-            ctx.closePath();
-        } else { // MULTIBALL
-            const r = p.radius * 0.5;
-            ctx.fillStyle = p.color;
-            ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
-            ctx.beginPath(); ctx.arc(p.x - r, p.y - r, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
-            ctx.beginPath(); ctx.arc(p.x + r, p.y - r, r, 0, Math.PI * 2); ctx.fill(); ctx.closePath();
-        }
-        
-        ctx.shadowBlur = 0; 
-        p.y += p.dy;
-        
-        if (p.y - p.radius > HEIGHT) {
-            powerups.splice(i, 1);
-        }
-    }
-}
+function touchMoveHandler(e) { /* ... */ }
+function drawBall(ball) { /* ... */ }
+function drawPaddle() { /* ... */ }
+function drawBricks() { /* ... */ }
+function drawScore() { /* ... */ }
+function drawLives() { /* ... */ }
+function drawPowerups() { /* ... */ }
 
 
 // =======================================================
-// 5. 충돌 처리 로직
+// 5. 파워업 및 충돌 처리 로직 (수정)
 // =======================================================
 function activateLongPaddle() { /* ... */ }
 function activateMultiball() { /* ... */ }
 function powerupCollisionDetection() { /* ... */ }
-function checkWinCondition() { /* ... */ }
-function brickCollisionDetection(ball) { /* ... */ }
+
+function checkWinCondition() {
+    bricksRemaining--;
+    if (bricksRemaining === 0) {
+        clearTimeout(descentTimer);
+        let nextPattern = level + 1;
+        sounds.bgm01.pause(); sounds.bgm02.pause();
+
+        if (nextPattern > levelPatterns.length) {
+            playSound('gameOver'); 
+            alert(`축하합니다! 최고 난이도 패턴(${level})까지 모두 클리어했습니다! 최종 점수: ${score}`);
+            document.location.reload(); 
+        } else {
+            playSound('powerup'); 
+            alert(`패턴 ${level} 클리어! 다음 패턴 ${nextPattern}로 넘어갑니다.`);
+            
+            level = nextPattern; 
+            initBricksForPattern(nextPattern);
+            
+            const config = LEVEL_CONFIGS[level];
+            const speed = BALL_SPEED_BASE * config.speed_ratio;
+            
+            balls = [{x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"}];
+            paddleX = (WIDTH - PADDLE_WIDTH) / 2;
+            brickOffsetTop = 30;
+            
+            (level === 2 ? sounds.bgm02 : sounds.bgm01).play();
+            descentTimer = setTimeout(descentBricks, descentInterval);
+        }
+    }
+}
+
+// ✨ 벽돌 관통 오류 해결: 충돌 검사를 현재 위치와 경계로만 판단합니다.
+function brickCollisionDetection(ball) {
+    for(let c=0; c<brickColumnCount; c++) {
+        for(let r=0; r<brickRowCount; r++) {
+            const b = bricks[c][r];
+            if (b.status === 1) {
+                // 볼의 중심이 벽돌의 경계 내에 있는지 확인
+                if (ball.x + ball.radius > b.x && 
+                    ball.x - ball.radius < b.x + brickWidth && 
+                    ball.y + ball.radius > b.y && 
+                    ball.y - ball.radius < b.y + brickHeight) 
+                {
+                    // 벽돌 파괴 및 방향 반전
+                    b.status = 0; 
+                    score++; 
+                    playSound('ping'); 
+                    
+                    // 충돌 위치에 따라 dy 또는 dx 반전 (더 정확한 충돌 처리)
+                    const prevX = ball.x - ball.dx;
+                    const prevY = ball.y - ball.dy;
+                    
+                    if (prevX <= b.x || prevX >= b.x + brickWidth) {
+                        ball.dx = -ball.dx; // 좌우 충돌
+                    } else {
+                        ball.dy = -ball.dy; // 상하 충돌
+                    }
+                    
+                    if (Math.random() < POWERUP_PROBABILITY) {
+                        powerups.push(new Powerup(b.x + brickWidth/2, b.y + brickHeight));
+                    }
+                    
+                    checkWinCondition(); 
+                    return; // 한 프레임에 하나의 벽돌만 깨도록 처리
+                }
+            }
+        }
+    }
+}
 
 function ballWallAndPaddleCollision(ball, ballIndex) {
     // 1. 좌/우 벽 충돌 (튕김)
@@ -326,22 +196,7 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
     }
 }
 
-function handleBallLoss() {
-    if (balls.length === 0) {
-        lives--;
-        if (!lives) {
-            clearTimeout(descentTimer); 
-            sounds.bgm01.pause(); sounds.bgm02.pause(); playSound('gameOver'); 
-            alert("GAME OVER! 최종 점수: " + score);
-            document.location.reload(); 
-        } else {
-            const config = LEVEL_CONFIGS[level];
-            const speed = BALL_SPEED_BASE * config.speed_ratio;
-            balls.push({x: WIDTH / 2, y: HEIGHT - 30, dx: speed, dy: -speed, radius: 8, color: "#FFDD00"});
-            paddleX = (WIDTH - PADDLE_WIDTH) / 2;
-        }
-    }
-}
+function handleBallLoss() { /* ... */ }
 
 
 // =======================================================
@@ -352,7 +207,6 @@ let animationId;
 function draw() {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     
-    // 이 draw 함수가 requestAnimationFrame에 의해 반복 실행되면서 모든 오브젝트를 화면에 그립니다.
     drawBricks();
     drawPaddle();
     drawScore();
@@ -364,10 +218,11 @@ function draw() {
         
         drawBall(ball);
         brickCollisionDetection(ball);
-        ballWallAndPaddleCollision(ball, i);
+        // ✨ 공 움직임은 충돌 검사 후에 실행되어야 합니다.
+        ballWallAndPaddleCollision(ball, i); 
         
-        ball.x += ball.dx;
-        ball.y += ball.dy;
+        ball.x += ball.dx; // ✨ 공 이동
+        ball.y += ball.dy; // ✨ 공 이동
     }
     
     powerupCollisionDetection();
@@ -375,9 +230,7 @@ function draw() {
     animationId = requestAnimationFrame(draw);
 }
 
-// 🚨 게임 시작 통합 함수 (Canvas 객체 검증 후 실행)
 function initializeAndStartGame() {
-    // Canvas가 정상적으로 로드된 경우에만 모든 초기화 및 게임 루프 시작
     if (canvas) {
         resetGame(1); 
         descentTimer = setTimeout(descentBricks, descentInterval);
