@@ -2,6 +2,69 @@
 // 🎮 NEON BREAKOUT - 사이버펑크 벽돌깨기
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+// ⭐ 태블릿용 에러 표시 패널 (맨 위에 추가!)
+(function() {
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'errorPanel';
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-height: 200px;
+        background: rgba(255, 0, 0, 0.9);
+        color: white;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 12px;
+        overflow-y: auto;
+        z-index: 10000;
+        display: none;
+        border-bottom: 3px solid red;
+    `;
+    document.body.appendChild(errorDiv);
+
+    // 콘솔 에러를 화면에 표시
+    window.onerror = function(msg, url, line, col, error) {
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML += `
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.3); padding: 5px; margin: 5px 0;">
+                ❌ <strong>에러 발생!</strong><br>
+                📝 메시지: ${msg}<br>
+                📍 위치: Line ${line}, Col ${col}<br>
+                📄 파일: ${url}<br>
+                ${error ? `🔍 상세: ${error.stack}` : ''}
+            </div>
+        `;
+        return false;
+    };
+
+    // console.log도 화면에 표시
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        if (args[0] && args[0].toString().includes('❌')) {
+            errorDiv.style.display = 'block';
+            errorDiv.innerHTML += `<div style="color: #ffcccc; padding: 3px;">📋 ${args.join(' ')}</div>`;
+        }
+    };
+
+    console.error = function(...args) {
+        originalError.apply(console, args);
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML += `<div style="color: #ff6666; padding: 3px; font-weight: bold;">❌ ${args.join(' ')}</div>`;
+    };
+
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML += `<div style="color: #ffff99; padding: 3px;">⚠️ ${args.join(' ')}</div>`;
+    };
+})();
+
 console.log("━━━━━━━━━━━━━━━━━━━━━━");
 console.log("🎮 게임 스크립트 로딩 시작...");
 console.log("━━━━━━━━━━━━━━━━━━━━━━");
