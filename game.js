@@ -1,15 +1,15 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 NEON BREAKOUT - Phase 1 (안정화 버전)
+// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 1/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-const WIDTH = canvas.width;
-const HEIGHT = canvas.height;
+const WIDTH = 480;
+const HEIGHT = 768;
 
-// 패들 설정
-const PADDLE_WIDTH_BASE = 120;
+// 패들 설정 (모바일용 크기)
+const PADDLE_WIDTH_BASE = 100;
 let PADDLE_WIDTH = PADDLE_WIDTH_BASE;
 const PADDLE_HEIGHT = 15;
 let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
@@ -18,14 +18,14 @@ let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
 const BALL_SPEED_BASE = 4;
 let balls = [];
 
-// 벽돌 설정
-const brickRowCount = 6;
-const brickColumnCount = 10;
+// 벽돌 설정 (모바일용 조정)
+const brickRowCount = 8;
+const brickColumnCount = 6;
 const brickWidth = 70;
 const brickHeight = 25;
-const brickPadding = 10;
-const brickOffsetTop = 80;
-const brickOffsetLeft = 35;
+const brickPadding = 5;
+const brickOffsetTop = 120;
+const brickOffsetLeft = 15;
 
 let bricks = [];
 let bricksRemaining = 0;
@@ -36,10 +36,6 @@ let lives = 3;
 let level = 1;
 let isPaused = false;
 let isLevelingUp = false;
-
-// 입력 상태
-let rightPressed = false;
-let leftPressed = false;
 
 // 파워업
 let powerups = [];
@@ -89,11 +85,61 @@ let levelUpAnimation = {
     maxDuration: 3000
 };
 
-// 메뉴 상태
-let isMenuOpen = false;
+// 사운드
+let sounds = {
+    ping: null,
+    crash: null,
+    gameOver: null,
+    powerup: null,
+    levelup: null,
+    bgm01: null
+};
 
-// 튜토리얼
-let showTutorial = true;
+let isBGMEnabled = true;
+let isSFXEnabled = true;
+
+// 사운드 로드
+function loadSound(name, src) {
+    try {
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        return audio;
+    } catch (e) {
+        return null;
+    }
+}
+
+try {
+    sounds.ping = loadSound('ping', 'assets/sounds/ping.mp3');
+    sounds.crash = loadSound('crash', 'assets/sounds/crash.wav');
+    sounds.gameOver = loadSound('gameOver', 'assets/sounds/game_over.wav');
+    sounds.powerup = loadSound('powerup', 'assets/sounds/powerup.mp3');
+    sounds.levelup = loadSound('levelup', 'assets/sounds/powerup.mp3');
+    sounds.bgm01 = loadSound('bgm01', 'assets/sounds/bgm01.mp3');
+    
+    if (sounds.bgm01) {
+        sounds.bgm01.loop = true;
+        sounds.bgm01.volume = 0.3;
+    }
+} catch (e) {}
+
+function playSound(name) {
+    if (!isSFXEnabled) return;
+    try {
+        const sound = sounds[name];
+        if (sound) {
+            sound.currentTime = 0;
+            sound.play().catch(() => {});
+        }
+    } catch (e) {}
+}
+
+function startBGM() {
+    if (!isBGMEnabled) return;
+    try {
+        if (sounds.bgm01) sounds.bgm01.play().catch(() => {});
+    } catch (e) {}
+}
 
 // 파티클 클래스
 class Particle {
@@ -139,39 +185,13 @@ class Powerup {
     }
 }
 
-// 키보드 이벤트
-document.addEventListener("keydown", keyDownHandler);
-document.addEventListener("keyup", keyUpHandler);
-
-function keyDownHandler(e) {
-    if (e.key === "Right" || e.key === "ArrowRight") {
-        rightPressed = true;
-    } else if (e.key === "Left" || e.key === "ArrowLeft") {
-        leftPressed = true;
-    } else if (e.key === " " || e.key === "Spacebar") {
-        e.preventDefault();
-        isPaused = !isPaused;
-    } else if (e.key === "Escape") {
-        e.preventDefault();
-        isMenuOpen = !isMenuOpen;
-        isPaused = isMenuOpen;
-    }
-}
-
-function keyUpHandler(e) {
-    if (e.key === "Right" || e.key === "ArrowRight") {
-        rightPressed = false;
-    } else if (e.key === "Left" || e.key === "ArrowLeft") {
-        leftPressed = false;
-    }
-}
-
 // 터치 이벤트
 let touchX = null;
 
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     touchX = e.touches[0].clientX;
+    startBGM();
 });
 
 canvas.addEventListener("touchmove", (e) => {
@@ -203,7 +223,7 @@ function resetGame(newLevel) {
     const speed = BALL_SPEED_BASE * config.speed_ratio;
     balls = [{
         x: WIDTH / 2,
-        y: HEIGHT - 80,
+        y: HEIGHT - 100,
         dx: speed,
         dy: -speed,
         radius: 8,
@@ -261,11 +281,16 @@ function descentBricks() {
     }
     
     descentCount++;
+    playSound('crash');
     
     if (descentCount < maxDescent) {
         descentTimer = setTimeout(descentBricks, descentInterval);
     }
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 2/3)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 그리기 함수들
 function drawBackground() {
@@ -278,13 +303,59 @@ function drawBackground() {
 
 function drawTopUI() {
     ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
-    ctx.fillRect(0, 0, WIDTH, 60);
+    ctx.fillRect(0, 0, WIDTH, 100);
     
-    ctx.font = "bold 20px 'Courier New'";
+    ctx.font = "bold 24px 'Courier New'";
     ctx.fillStyle = "#0ff";
+    ctx.textAlign = "left";
     ctx.fillText(`점수: ${score}`, 20, 35);
-    ctx.fillText(`레벨: ${level}`, WIDTH / 2 - 40, 35);
-    ctx.fillText(`생명: ${"❤️".repeat(lives)}`, WIDTH - 150, 35);
+    
+    ctx.textAlign = "center";
+    ctx.fillText(`레벨: ${level}`, WIDTH / 2, 35);
+    
+    ctx.textAlign = "right";
+    ctx.fillText(`생명: ${"❤️".repeat(lives)}`, WIDTH - 20, 35);
+    
+    // 파워업 타이머
+    let y = 70;
+    const powerupNames = {
+        long: '⬌',
+        mega: '●',
+        fire: '🔥',
+        magnetic: '🧲'
+    };
+    
+    for (let key in activePowerups) {
+        if (activePowerups[key].active) {
+            const remaining = activePowerups[key].remaining;
+            const maxDuration = key === 'long' ? 15000 : key === 'mega' ? 10000 : key === 'fire' ? 12000 : 10000;
+            const progress = remaining / maxDuration;
+            
+            const colors = {
+                long: '#00FF00',
+                mega: '#FF00FF',
+                fire: '#FF4500',
+                magnetic: '#00FFFF'
+            };
+            
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(10, y, 100, 20);
+            
+            ctx.fillStyle = colors[key];
+            ctx.fillRect(10, y, 100 * progress, 20);
+            
+            ctx.strokeStyle = colors[key];
+            ctx.lineWidth = 2;
+            ctx.strokeRect(10, y, 100, 20);
+            
+            ctx.font = "16px Arial";
+            ctx.fillStyle = "#FFF";
+            ctx.textAlign = "center";
+            ctx.fillText(powerupNames[key], 60, y + 15);
+            
+            y += 25;
+        }
+    }
 }
 
 function drawBricks() {
@@ -317,7 +388,7 @@ function drawPaddle() {
     ctx.fillStyle = gradient;
     ctx.shadowBlur = 20;
     ctx.shadowColor = '#0FF';
-    ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT, PADDLE_WIDTH, PADDLE_HEIGHT);
+    ctx.fillRect(paddleX, HEIGHT - PADDLE_HEIGHT - 10, PADDLE_WIDTH, PADDLE_HEIGHT);
     ctx.shadowBlur = 0;
 }
 
@@ -386,126 +457,6 @@ function drawParticles() {
     }
 }
 
-function drawPowerupTimers() {
-    let y = 70;
-    const powerupNames = {
-        long: '⬌ 긴 패들',
-        mega: '● 메가볼',
-        fire: '🔥 파이어볼',
-        magnetic: '🧲 자석'
-    };
-    
-    for (let key in activePowerups) {
-        if (activePowerups[key].active) {
-            const remaining = activePowerups[key].remaining;
-            const maxDuration = key === 'long' ? 15000 : key === 'mega' ? 10000 : key === 'fire' ? 12000 : 10000;
-            const progress = remaining / maxDuration;
-            
-            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(10, y, 150, 25);
-            
-            const colors = {
-                long: '#00FF00',
-                mega: '#FF00FF',
-                fire: '#FF4500',
-                magnetic: '#00FFFF'
-            };
-            
-            ctx.fillStyle = colors[key];
-            ctx.fillRect(10, y, 150 * progress, 25);
-            
-            ctx.strokeStyle = colors[key];
-            ctx.lineWidth = 2;
-            ctx.strokeRect(10, y, 150, 25);
-            
-            ctx.font = "12px Arial";
-            ctx.fillStyle = "#FFF";
-            ctx.textAlign = "left";
-            ctx.fillText(powerupNames[key], 15, y + 17);
-            
-            y += 30;
-        }
-    }
-}
-
-function drawTutorial() {
-    if (!showTutorial) return;
-    
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-    ctx.fillRect(WIDTH / 2 - 200, HEIGHT / 2 - 100, 400, 200);
-    
-    ctx.strokeStyle = "#0FF";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(WIDTH / 2 - 200, HEIGHT / 2 - 100, 400, 200);
-    
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "#0FF";
-    ctx.textAlign = "center";
-    ctx.fillText("🎮 조작법", WIDTH / 2, HEIGHT / 2 - 60);
-    
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#FFF";
-    ctx.fillText("← → : 패들 이동", WIDTH / 2, HEIGHT / 2 - 20);
-    ctx.fillText("SPACE : 일시정지", WIDTH / 2, HEIGHT / 2 + 10);
-    ctx.fillText("ESC : 메뉴", WIDTH / 2, HEIGHT / 2 + 40);
-    
-    ctx.fillStyle = "#0FF";
-    ctx.fillText("클릭하여 시작", WIDTH / 2, HEIGHT / 2 + 80);
-}
-
-canvas.addEventListener('click', function hideTutorial() {
-    if (showTutorial) {
-        showTutorial = false;
-        canvas.removeEventListener('click', hideTutorial);
-    }
-});
-
-function drawPauseOverlay() {
-    if (!isPaused || isMenuOpen) return;
-    
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    
-    ctx.font = "bold 48px Arial";
-    ctx.fillStyle = "#0FF";
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#0FF";
-    ctx.fillText("일시정지", WIDTH / 2, HEIGHT / 2);
-    ctx.shadowBlur = 0;
-    
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "#FFF";
-    ctx.fillText("SPACE를 눌러 계속", WIDTH / 2, HEIGHT / 2 + 50);
-}
-
-function drawMenu() {
-    if (!isMenuOpen) return;
-    
-    ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    
-    ctx.font = "bold 36px Arial";
-    ctx.fillStyle = "#0FF";
-    ctx.textAlign = "center";
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#0FF";
-    ctx.fillText("메뉴", WIDTH / 2, 100);
-    ctx.shadowBlur = 0;
-    
-    ctx.font = "20px Arial";
-    ctx.fillStyle = "#FFF";
-    ctx.fillText("다시 시작 (R키)", WIDTH / 2, 250);
-    ctx.fillText("ESC로 돌아가기", WIDTH / 2, 350);
-}
-
-document.addEventListener("keydown", function(e) {
-    if (!isMenuOpen) return;
-    if (e.key === 'r' || e.key === 'R') {
-        document.location.reload();
-    }
-});
-
 function drawLevelUpAnimation() {
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -519,7 +470,7 @@ function drawLevelUpAnimation() {
         ctx.globalAlpha = 1;
     }
     
-    ctx.font = "bold 64px Arial";
+    ctx.font = "bold 48px Arial";
     ctx.fillStyle = "#FFD700";
     ctx.textAlign = "center";
     ctx.shadowBlur = 30;
@@ -527,7 +478,7 @@ function drawLevelUpAnimation() {
     ctx.fillText(`레벨 ${level} 완료!`, WIDTH / 2, HEIGHT / 2 - 50);
     ctx.shadowBlur = 0;
     
-    ctx.font = "36px Arial";
+    ctx.font = "28px Arial";
     ctx.fillStyle = "#FFF";
     ctx.fillText(`다음 레벨: ${(level % (LEVEL_CONFIGS.length - 1)) + 1}`, WIDTH / 2, HEIGHT / 2 + 50);
 }
@@ -540,6 +491,7 @@ function activateLongPaddle() {
     isLongPaddleActive = true;
     activePowerups.long.active = true;
     activePowerups.long.remaining = LONG_PADDLE_DURATION;
+    playSound('powerup');
     longPaddleTimer = setTimeout(() => {
         PADDLE_WIDTH = PADDLE_WIDTH_BASE * config.paddle_ratio;
         isLongPaddleActive = false;
@@ -555,6 +507,7 @@ function activateMegaBall() {
     });
     activePowerups.mega.active = true;
     activePowerups.mega.remaining = 10000;
+    playSound('powerup');
     setTimeout(() => {
         balls.forEach(ball => {
             ball.radius = 8;
@@ -568,6 +521,7 @@ function activateFireBall() {
     balls.forEach(ball => ball.isFire = true);
     activePowerups.fire.active = true;
     activePowerups.fire.remaining = 12000;
+    playSound('powerup');
     setTimeout(() => {
         balls.forEach(ball => ball.isFire = false);
         activePowerups.fire.active = false;
@@ -579,6 +533,7 @@ function activateMagnetic() {
     isMagneticActive = true;
     activePowerups.magnetic.active = true;
     activePowerups.magnetic.remaining = MAGNETIC_DURATION;
+    playSound('powerup');
     magneticTimer = setTimeout(() => {
         isMagneticActive = false;
         magneticTimer = null;
@@ -602,6 +557,7 @@ function activateMultiball(ball) {
         radius: ball.radius, color: "#FFFF00",
         isMega: ball.isMega, isFire: ball.isFire, trail: []
     });
+    playSound('powerup');
 }
 
 function updatePowerupTimers(deltaTime) {
@@ -619,6 +575,7 @@ function updatePowerupTimers(deltaTime) {
 function startLevelUpAnimation() {
     isLevelingUp = true;
     isPaused = true;
+    playSound('levelup');
     levelUpAnimation.particles = [];
     const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF', '#FFD700', '#FFF'];
     for (let i = 0; i < 80; i++) {
@@ -648,15 +605,19 @@ function updateLevelUpAnimation(deltaTime) {
             levelUpAnimation.particles.splice(i, 1);
         }
     }
-}
+} 
+
+ // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 3/3)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 충돌 처리
 function powerupCollisionDetection() {
     if (isPaused || isLevelingUp) return;
     for (let i = powerups.length - 1; i >= 0; i--) {
         const p = powerups[i];
-        if (p.y + p.radius >= HEIGHT - PADDLE_HEIGHT &&
-            p.y - p.radius <= HEIGHT &&
+        if (p.y + p.radius >= HEIGHT - PADDLE_HEIGHT - 10 &&
+            p.y - p.radius <= HEIGHT - 10 &&
             p.x >= paddleX && 
             p.x <= paddleX + PADDLE_WIDTH) {
             if (p.type === 'LONG_PADDLE') activateLongPaddle();
@@ -696,6 +657,7 @@ function brickCollisionDetection(ball) {
                     b.status = 0;
                     score += 10;
                     bricksRemaining--;
+                    playSound('crash');
                     
                     const brickColor = `hsl(${360 / brickRowCount * r}, 80%, 50%)`;
                     for (let i = 0; i < 15; i++) {
@@ -750,7 +712,7 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
     
     if (isMagneticActive) {
         const paddleCenterX = paddleX + PADDLE_WIDTH / 2;
-        const paddleCenterY = HEIGHT - PADDLE_HEIGHT / 2;
+        const paddleCenterY = HEIGHT - PADDLE_HEIGHT / 2 - 10;
         const dx = paddleCenterX - ball.x;
         const dy = paddleCenterY - ball.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -764,20 +726,23 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
     if (ball.x + ball.dx > WIDTH - ball.radius) {
         ball.dx = -Math.abs(ball.dx);
         ball.x = WIDTH - ball.radius;
+        playSound('ping');
     } else if (ball.x + ball.dx < ball.radius) {
         ball.dx = Math.abs(ball.dx);
         ball.x = ball.radius;
-    }
-    
-    if (ball.y + ball.dy < ball.radius) {
+        playSound('ping');
+    }       
+if (ball.y + ball.dy < ball.radius) {
         ball.dy = Math.abs(ball.dy);
         ball.y = ball.radius;
+        playSound('ping');
     }
     
-    if (ball.y + ball.radius >= HEIGHT - PADDLE_HEIGHT) {
+    if (ball.y + ball.radius >= HEIGHT - PADDLE_HEIGHT - 10) {
         if (ball.x >= paddleX && ball.x <= paddleX + PADDLE_WIDTH && ball.dy > 0) {
             ball.dy = -Math.abs(ball.dy);
-            ball.y = HEIGHT - PADDLE_HEIGHT - ball.radius;
+            ball.y = HEIGHT - PADDLE_HEIGHT - 10 - ball.radius;
+            playSound('crash');
             const relativeIntersectX = (ball.x - (paddleX + PADDLE_WIDTH / 2));
             const normalizedIntersect = relativeIntersectX / (PADDLE_WIDTH / 2);
             ball.dx += normalizedIntersect * 2;
@@ -797,6 +762,10 @@ function handleBallLoss() {
                 clearTimeout(descentTimer);
                 descentTimer = null;
             }
+            try {
+                if (sounds.bgm01) sounds.bgm01.pause();
+            } catch (e) {}
+            playSound('gameOver');
             setTimeout(() => {
                 if (confirm(`게임 오버!\n최종 점수: ${score}\n\n다시 시작하시겠습니까?`)) {
                     document.location.reload();
@@ -807,7 +776,7 @@ function handleBallLoss() {
             const speed = BALL_SPEED_BASE * config.speed_ratio;
             balls.push({
                 x: WIDTH / 2,
-                y: HEIGHT - 80,
+                y: HEIGHT - 100,
                 dx: speed,
                 dy: -speed,
                 radius: 8,
@@ -818,14 +787,6 @@ function handleBallLoss() {
             });
             paddleX = (WIDTH - PADDLE_WIDTH) / 2;
         }
-    }
-}
-
-function movePaddle() {
-    if (rightPressed && paddleX < WIDTH - PADDLE_WIDTH) {
-        paddleX += 7;
-    } else if (leftPressed && paddleX > 0) {
-        paddleX -= 7;
     }
 }
 
@@ -844,8 +805,6 @@ function draw() {
     drawPowerups();
     drawParticles();
     updatePowerupTimers(deltaTime);
-    drawPowerupTimers();
-    drawTutorial();
     
     if (isLevelingUp) {
         updateLevelUpAnimation(deltaTime);
@@ -853,7 +812,6 @@ function draw() {
     }
     
     if (!isPaused && !isLevelingUp) {
-        movePaddle();
         for (let i = balls.length - 1; i >= 0; i--) {
             let ball = balls[i];
             drawBall(ball);
@@ -869,8 +827,6 @@ function draw() {
         }
     }
     
-    drawPauseOverlay();
-    drawMenu();
     requestAnimationFrame(draw);
 }
 
@@ -879,4 +835,4 @@ resetGame(1);
 descentTimer = setTimeout(descentBricks, descentInterval);
 draw();
 
-console.log("🎉 게임 시작!");
+console.log("🎮 모바일 게임 시작!");
