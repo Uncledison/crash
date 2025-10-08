@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🎮 네온 브레이크아웃</title>
+    <title>라라네 벽돌깨기</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
@@ -15,13 +17,47 @@
         }
 
         body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
             background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
-            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        .game-title {
+            font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+            font-size: 36px;
+            font-weight: 900;
+            color: #fff;
+            text-align: center;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 
+                0 0 10px rgba(0, 255, 255, 0.8),
+                0 0 20px rgba(0, 255, 255, 0.6),
+                0 0 30px rgba(0, 255, 255, 0.4),
+                0 0 40px rgba(255, 0, 255, 0.3);
+            animation: neonPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes neonPulse {
+            0%, 100% {
+                text-shadow: 
+                    0 0 10px rgba(0, 255, 255, 0.8),
+                    0 0 20px rgba(0, 255, 255, 0.6),
+                    0 0 30px rgba(0, 255, 255, 0.4),
+                    0 0 40px rgba(255, 0, 255, 0.3);
+            }
+            50% {
+                text-shadow: 
+                    0 0 15px rgba(0, 255, 255, 1),
+                    0 0 30px rgba(0, 255, 255, 0.8),
+                    0 0 45px rgba(0, 255, 255, 0.6),
+                    0 0 60px rgba(255, 0, 255, 0.5);
+            }
         }
 
         #gameCanvas {
@@ -38,6 +74,7 @@
     </style>
 </head>
 <body>
+    <div class="game-title">라라네 벽돌깨기</div>
     <canvas id="gameCanvas" width="480" height="768"></canvas>
     <script src="game.js"></script>
 </body>
