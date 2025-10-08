@@ -1,5 +1,5 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 라라네 벽돌깨기 - 최종 완성 버전 (Part 1/3)
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 1/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const canvas = document.getElementById("gameCanvas");
@@ -100,13 +100,11 @@ let isBGMEnabled = true;
 let isSFXEnabled = true;
 let bgmStarted = false;
 let currentBGM = null;
-let userInteracted = false;
 
-// 개선된 사운드 로드 함수
+// 사운드 로드 함수
 function loadSound(name, src) {
     try {
         const audio = new Audio();
-        audio.crossOrigin = "anonymous";
         audio.preload = 'auto';
         audio.src = src;
         
@@ -118,7 +116,6 @@ function loadSound(name, src) {
             console.warn(`❌ ${name} 로드 실패:`, e);
         });
         
-        audio.load();
         return audio;
     } catch (e) {
         console.error(`❌ ${name} 생성 실패:`, e);
@@ -128,24 +125,20 @@ function loadSound(name, src) {
 
 // 사운드 초기화
 try {
-    console.log("🎵 사운드 초기화 시작...");
-    
-    const basePath = 'assets/sounds/';
-    
-    sounds.ping = loadSound('ping', basePath + 'ping.mp3');
-    sounds.crash = loadSound('crash', basePath + 'crash.wav');
-    sounds.gameOver = loadSound('gameOver', basePath + 'game_over.wav');
-    sounds.powerup = loadSound('powerup', basePath + 'powerup.mp3');
-    sounds.levelup = loadSound('levelup', basePath + 'powerup.mp3');
-    sounds.bgm01 = loadSound('bgm01', basePath + 'bgm01.mp3');
-    sounds.bgm02 = loadSound('bgm02', basePath + 'bgm02.mp3');
+    sounds.ping = loadSound('ping', 'assets/sounds/ping.mp3');
+    sounds.crash = loadSound('crash', 'assets/sounds/crash.wav');
+    sounds.gameOver = loadSound('gameOver', 'assets/sounds/game_over.wav');
+    sounds.powerup = loadSound('powerup', 'assets/sounds/powerup.mp3');
+    sounds.levelup = loadSound('levelup', 'assets/sounds/powerup.mp3');
+    sounds.bgm01 = loadSound('bgm01', 'assets/sounds/bgm01.mp3');
+    sounds.bgm02 = loadSound('bgm02', 'assets/sounds/bgm02.mp3');
     
     // BGM 설정
     if (sounds.bgm01) {
         sounds.bgm01.loop = false;
         sounds.bgm01.volume = 0.3;
+        // BGM01 끝나면 BGM02 재생
         sounds.bgm01.addEventListener('ended', () => {
-            console.log("🎵 BGM01 종료, BGM02 시작");
             if (isBGMEnabled && sounds.bgm02) {
                 currentBGM = 'bgm02';
                 sounds.bgm02.play().catch(e => console.warn("BGM02 재생 실패:", e));
@@ -156,8 +149,8 @@ try {
     if (sounds.bgm02) {
         sounds.bgm02.loop = false;
         sounds.bgm02.volume = 0.3;
+        // BGM02 끝나면 BGM01 재생
         sounds.bgm02.addEventListener('ended', () => {
-            console.log("🎵 BGM02 종료, BGM01 시작");
             if (isBGMEnabled && sounds.bgm01) {
                 currentBGM = 'bgm01';
                 sounds.bgm01.play().catch(e => console.warn("BGM01 재생 실패:", e));
@@ -175,7 +168,7 @@ function playSound(name) {
     if (!isSFXEnabled) return;
     try {
         const sound = sounds[name];
-        if (sound && sound.readyState >= 2) {
+        if (sound) {
             sound.currentTime = 0;
             const playPromise = sound.play();
             if (playPromise !== undefined) {
@@ -189,47 +182,25 @@ function playSound(name) {
     }
 }
 
-// BGM 시작 (크롬 대응 개선)
+// BGM 시작 (BGM01부터 시작)
 function startBGM() {
     if (!isBGMEnabled || bgmStarted) return;
-    
-    if (!userInteracted) {
-        console.log("⚠️ 사용자 상호작용 필요");
-        return;
-    }
-    
     try {
-        if (sounds.bgm01 && sounds.bgm01.readyState >= 2) {
+        if (sounds.bgm01) {
             console.log("🎵 BGM01 시작 시도...");
             currentBGM = 'bgm01';
-            
-            // 볼륨 페이드 인
-            sounds.bgm01.volume = 0;
-            
             const playPromise = sounds.bgm01.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
-                    let vol = 0;
-                    const fadeIn = setInterval(() => {
-                        if (vol < 0.3) {
-                            vol += 0.05;
-                            sounds.bgm01.volume = vol;
-                        } else {
-                            clearInterval(fadeIn);
-                            sounds.bgm01.volume = 0.3;
-                        }
-                    }, 100);
-                    
                     console.log("✅ BGM01 재생 성공!");
                     bgmStarted = true;
                 }).catch(err => {
                     console.error("❌ BGM 재생 실패:", err);
-                    setTimeout(() => {
-                        bgmStarted = false;
-                        startBGM();
-                    }, 1000);
+                    bgmStarted = false;
                 });
             }
+        } else {
+            console.warn("⚠️ BGM 파일이 로드되지 않음");
         }
     } catch (e) {
         console.error("❌ BGM 시작 에러:", e);
@@ -291,21 +262,17 @@ class Powerup {
     }
 }
 
-// 터치 이벤트 (크롬 대응 개선)
+// 터치 이벤트
 let touchX = null;
 let touchStarted = false;
-let lastTapTime = 0;
 
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     touchX = e.touches[0].clientX;
-    userInteracted = true;
     
     if (!touchStarted) {
         touchStarted = true;
-        setTimeout(() => {
-            startBGM();
-        }, 100);
+        startBGM();
         console.log("👆 첫 터치 감지!");
     }
 });
@@ -326,29 +293,13 @@ canvas.addEventListener("touchmove", (e) => {
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
     touchX = null;
-    
-    // 더블 탭으로 BGM 재시작
-    const currentTime = new Date().getTime();
-    const tapGap = currentTime - lastTapTime;
-    
-    if (tapGap < 300 && tapGap > 0) {
-        if (!bgmStarted) {
-            console.log("🎵 더블 탭으로 BGM 시작 시도");
-            userInteracted = true;
-            startBGM();
-        }
-    }
-    lastTapTime = currentTime;
 });
 
-// 클릭 이벤트 (PC 테스트용)
+// 클릭으로도 BGM 시작 (PC 테스트용)
 canvas.addEventListener("click", () => {
-    userInteracted = true;
     if (!touchStarted) {
         touchStarted = true;
-        setTimeout(() => {
-            startBGM();
-        }, 100);
+        startBGM();
         console.log("🖱️ 클릭 감지!");
     }
 });
@@ -429,7 +380,7 @@ function descentBricks() {
     }
 }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 라라네 벽돌깨기 - 최종 완성 버전 (Part 2/3)
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 2/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 그리기 함수들
@@ -747,7 +698,7 @@ function updateLevelUpAnimation(deltaTime) {
     }
 }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 라라네 벽돌깨기 - 최종 완성 버전 (Part 3/3)
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 3/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 충돌 처리
@@ -974,5 +925,4 @@ descentTimer = setTimeout(descentBricks, descentInterval);
 draw();
 
 console.log("🎮 라라네 벽돌깨기 시작!");
-console.log("🎵 BGM: 첫 터치 시 BGM01 → BGM02 순환 재생");
-console.log("📱 크롬에서 소리 안 나면: 화면 아무 곳이나 2번 탭!");
+console.log("🎵 첫 터치 시 BGM01 → BGM02 순환 재생");
