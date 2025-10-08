@@ -1,5 +1,5 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 1/3)
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 1/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const canvas = document.getElementById("gameCanvas");
@@ -8,7 +8,7 @@ const ctx = canvas.getContext("2d");
 const WIDTH = 480;
 const HEIGHT = 768;
 
-// 패들 설정 (모바일용 크기)
+// 패들 설정
 const PADDLE_WIDTH_BASE = 100;
 let PADDLE_WIDTH = PADDLE_WIDTH_BASE;
 const PADDLE_HEIGHT = 15;
@@ -18,7 +18,7 @@ let paddleX = (WIDTH - PADDLE_WIDTH) / 2;
 const BALL_SPEED_BASE = 4;
 let balls = [];
 
-// 벽돌 설정 (모바일용 조정)
+// 벽돌 설정
 const brickRowCount = 8;
 const brickColumnCount = 6;
 const brickWidth = 70;
@@ -85,30 +85,45 @@ let levelUpAnimation = {
     maxDuration: 3000
 };
 
-// 사운드
+// 사운드 시스템
 let sounds = {
     ping: null,
     crash: null,
     gameOver: null,
     powerup: null,
     levelup: null,
-    bgm01: null
+    bgm01: null,
+    bgm02: null
 };
 
 let isBGMEnabled = true;
 let isSFXEnabled = true;
+let bgmStarted = false;
+let currentBGM = null;
 
-// 사운드 로드
+// 사운드 로드 함수
 function loadSound(name, src) {
     try {
-        const audio = new Audio(src);
+        const audio = new Audio();
         audio.preload = 'auto';
+        audio.src = src;
+        
+        audio.addEventListener('canplaythrough', () => {
+            console.log(`✅ ${name} 로드 성공`);
+        });
+        
+        audio.addEventListener('error', (e) => {
+            console.warn(`❌ ${name} 로드 실패:`, e);
+        });
+        
         return audio;
     } catch (e) {
+        console.error(`❌ ${name} 생성 실패:`, e);
         return null;
     }
 }
 
+// 사운드 초기화
 try {
     sounds.ping = loadSound('ping', 'assets/sounds/ping.mp3');
     sounds.crash = loadSound('crash', 'assets/sounds/crash.wav');
@@ -116,29 +131,91 @@ try {
     sounds.powerup = loadSound('powerup', 'assets/sounds/powerup.mp3');
     sounds.levelup = loadSound('levelup', 'assets/sounds/powerup.mp3');
     sounds.bgm01 = loadSound('bgm01', 'assets/sounds/bgm01.mp3');
+    sounds.bgm02 = loadSound('bgm02', 'assets/sounds/bgm02.mp3');
     
+    // BGM 설정
     if (sounds.bgm01) {
-        sounds.bgm01.loop = true;
+        sounds.bgm01.loop = false;
         sounds.bgm01.volume = 0.3;
+        // BGM01 끝나면 BGM02 재생
+        sounds.bgm01.addEventListener('ended', () => {
+            if (isBGMEnabled && sounds.bgm02) {
+                currentBGM = 'bgm02';
+                sounds.bgm02.play().catch(e => console.warn("BGM02 재생 실패:", e));
+            }
+        });
     }
-} catch (e) {}
+    
+    if (sounds.bgm02) {
+        sounds.bgm02.loop = false;
+        sounds.bgm02.volume = 0.3;
+        // BGM02 끝나면 BGM01 재생
+        sounds.bgm02.addEventListener('ended', () => {
+            if (isBGMEnabled && sounds.bgm01) {
+                currentBGM = 'bgm01';
+                sounds.bgm01.play().catch(e => console.warn("BGM01 재생 실패:", e));
+            }
+        });
+    }
+    
+    console.log("🎵 사운드 초기화 완료");
+} catch (e) {
+    console.error("❌ 사운드 초기화 실패:", e);
+}
 
+// 효과음 재생
 function playSound(name) {
     if (!isSFXEnabled) return;
     try {
         const sound = sounds[name];
         if (sound) {
             sound.currentTime = 0;
-            sound.play().catch(() => {});
+            const playPromise = sound.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => {
+                    console.warn(`⚠️ ${name} 재생 실패:`, err);
+                });
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error(`❌ ${name} 재생 에러:`, e);
+    }
 }
 
+// BGM 시작 (BGM01부터 시작)
 function startBGM() {
-    if (!isBGMEnabled) return;
+    if (!isBGMEnabled || bgmStarted) return;
     try {
-        if (sounds.bgm01) sounds.bgm01.play().catch(() => {});
-    } catch (e) {}
+        if (sounds.bgm01) {
+            console.log("🎵 BGM01 시작 시도...");
+            currentBGM = 'bgm01';
+            const playPromise = sounds.bgm01.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("✅ BGM01 재생 성공!");
+                    bgmStarted = true;
+                }).catch(err => {
+                    console.error("❌ BGM 재생 실패:", err);
+                    bgmStarted = false;
+                });
+            }
+        } else {
+            console.warn("⚠️ BGM 파일이 로드되지 않음");
+        }
+    } catch (e) {
+        console.error("❌ BGM 시작 에러:", e);
+    }
+}
+
+// BGM 정지
+function stopBGM() {
+    try {
+        if (sounds.bgm01) sounds.bgm01.pause();
+        if (sounds.bgm02) sounds.bgm02.pause();
+        bgmStarted = false;
+    } catch (e) {
+        console.error("❌ BGM 정지 에러:", e);
+    }
 }
 
 // 파티클 클래스
@@ -187,11 +264,17 @@ class Powerup {
 
 // 터치 이벤트
 let touchX = null;
+let touchStarted = false;
 
 canvas.addEventListener("touchstart", (e) => {
     e.preventDefault();
     touchX = e.touches[0].clientX;
-    startBGM();
+    
+    if (!touchStarted) {
+        touchStarted = true;
+        startBGM();
+        console.log("👆 첫 터치 감지!");
+    }
 });
 
 canvas.addEventListener("touchmove", (e) => {
@@ -210,6 +293,15 @@ canvas.addEventListener("touchmove", (e) => {
 canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
     touchX = null;
+});
+
+// 클릭으로도 BGM 시작 (PC 테스트용)
+canvas.addEventListener("click", () => {
+    if (!touchStarted) {
+        touchStarted = true;
+        startBGM();
+        console.log("🖱️ 클릭 감지!");
+    }
 });
 
 // 게임 초기화
@@ -287,9 +379,8 @@ function descentBricks() {
         descentTimer = setTimeout(descentBricks, descentInterval);
     }
 }
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 2/3)
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 2/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 그리기 함수들
@@ -305,7 +396,7 @@ function drawTopUI() {
     ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
     ctx.fillRect(0, 0, WIDTH, 100);
     
-    ctx.font = "bold 24px 'Courier New'";
+    ctx.font = "bold 24px -apple-system, 'Apple SD Gothic Neo'";
     ctx.fillStyle = "#0ff";
     ctx.textAlign = "left";
     ctx.fillText(`점수: ${score}`, 20, 35);
@@ -470,7 +561,7 @@ function drawLevelUpAnimation() {
         ctx.globalAlpha = 1;
     }
     
-    ctx.font = "bold 48px Arial";
+    ctx.font = "bold 48px -apple-system, 'Apple SD Gothic Neo'";
     ctx.fillStyle = "#FFD700";
     ctx.textAlign = "center";
     ctx.shadowBlur = 30;
@@ -478,7 +569,7 @@ function drawLevelUpAnimation() {
     ctx.fillText(`레벨 ${level} 완료!`, WIDTH / 2, HEIGHT / 2 - 50);
     ctx.shadowBlur = 0;
     
-    ctx.font = "28px Arial";
+    ctx.font = "28px -apple-system, 'Apple SD Gothic Neo'";
     ctx.fillStyle = "#FFF";
     ctx.fillText(`다음 레벨: ${(level % (LEVEL_CONFIGS.length - 1)) + 1}`, WIDTH / 2, HEIGHT / 2 + 50);
 }
@@ -605,10 +696,9 @@ function updateLevelUpAnimation(deltaTime) {
             levelUpAnimation.particles.splice(i, 1);
         }
     }
-} 
-
- // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 🎮 NEON BREAKOUT - 모바일 세로 버전 (Part 3/3)
+}
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 🎮 라라네 벽돌깨기 - 모바일 세로 버전 (Part 3/3)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // 충돌 처리
@@ -731,8 +821,9 @@ function ballWallAndPaddleCollision(ball, ballIndex) {
         ball.dx = Math.abs(ball.dx);
         ball.x = ball.radius;
         playSound('ping');
-    }       
-if (ball.y + ball.dy < ball.radius) {
+    }
+    
+    if (ball.y + ball.dy < ball.radius) {
         ball.dy = Math.abs(ball.dy);
         ball.y = ball.radius;
         playSound('ping');
@@ -762,9 +853,7 @@ function handleBallLoss() {
                 clearTimeout(descentTimer);
                 descentTimer = null;
             }
-            try {
-                if (sounds.bgm01) sounds.bgm01.pause();
-            } catch (e) {}
+            stopBGM();
             playSound('gameOver');
             setTimeout(() => {
                 if (confirm(`게임 오버!\n최종 점수: ${score}\n\n다시 시작하시겠습니까?`)) {
@@ -835,4 +924,5 @@ resetGame(1);
 descentTimer = setTimeout(descentBricks, descentInterval);
 draw();
 
-console.log("🎮 모바일 게임 시작!");
+console.log("🎮 라라네 벽돌깨기 시작!");
+console.log("🎵 첫 터치 시 BGM01 → BGM02 순환 재생");
